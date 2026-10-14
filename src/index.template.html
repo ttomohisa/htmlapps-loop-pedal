@@ -1266,7 +1266,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "helpPrivacyBody": "録音した音はブラウザ内で処理し、このアプリから外部へ送信しません。マイクの許可は録音の準備操作後にのみ求めます。",
           "helpNotesTitle": "注意事項",
           "helpNoteStorage": "録音はメモリにのみ保持します。ページの更新・終了で消えます。必要な音声はWAVで保存してください。",
-          "helpNoteBrowser": "画面ロック、着信、タブ切り替え、マイクの切断で録音が止まる場合があります。復帰後は明示的に再開してください。",
+          "helpNoteBrowser": "画面ロック、着信、タブ切り替え、マイクの切断で録音が止まる場合があります。復帰後は明示的に再開してください。音声処理が完全に停止した場合は再読み込みが必要で、未保存の録音は失われます。",
           "helpNoteLatency": "端末や接続方式による録音遅延は完全には自動補正できません。パッドの設定からタイミングを調整してください。",
           "helpOffline": "音声処理に外部サービスは使いません。配布HTMLは単一ファイルですが、マイクや音声処理はブラウザの対応状況に左右されます。"
         },
@@ -1402,7 +1402,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "helpPrivacyBody": "Audio is processed in your browser and is not uploaded by this app. Microphone permission is requested only after you choose to enable it.",
           "helpNotesTitle": "Notes",
           "helpNoteStorage": "Takes are kept only in memory and disappear if the page closes or reloads. Download a WAV to keep them.",
-          "helpNoteBrowser": "Screen lock, calls, tab switching or microphone disconnection can interrupt recording. Resume explicitly after returning.",
+          "helpNoteBrowser": "Screen lock, calls, tab switching or microphone disconnection can interrupt recording. Resume explicitly after returning. If the audio engine stops entirely, reloading is required and unsaved recordings are lost.",
           "helpNoteLatency": "Device-dependent input/output latency cannot always be corrected automatically. Adjust per-track timing if needed.",
           "helpOffline": "No online audio service is required. The distributed HTML is self-contained, but microphone support depends on your browser."
         }
@@ -1532,6 +1532,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       let needsResume = false;
       let processorFailed = false;
       let queueGesturePending = false;
+      let interruptionRevision = 0;
       let phase = 0;
       let totalFrames = 0;
       let audioRate = 0;
@@ -1650,7 +1651,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           pad.disabled = !ready || (busy && !mine && !track) || (busy && !mine && Boolean(track));
           const menu = $('#padMenu' + i);
           menu.hidden = !track;
-          menu.disabled = busy || exporting;
+          menu.disabled = busy || exporting || processorFailed;
           menu.setAttribute('aria-label', readableTrack(i) + ' ' + t('trackSettings'));
         }
         $('#abortButton').disabled = !busy || exporting;
@@ -1736,6 +1737,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       function interruption(message) {
         if (!context || !engine || needsResume) return;
+        interruptionRevision++;
         needsResume = true;
         statusOverride = message || '';
         // Discard only the UI representation of an uncommitted take now.
@@ -1794,8 +1796,17 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           try {
             // The pending take must be discarded even if the browser paused before
             // processing the previous interruption message.
+            const resumeRevision = interruptionRevision;
             send({type:'interrupt'});
             await context.resume();
+            if (document.hidden || resumeRevision !== interruptionRevision ||
+                track.readyState !== 'live' || track.muted || processorFailed) {
+              send({type:'interrupt'});
+              if (context.state === 'running') await context.suspend();
+              needsResume = true;
+              updateUI();
+              return;
+            }
             send({type:'resume'});
             needsResume = false;
             statusOverride = '';
@@ -1806,6 +1817,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) { showError(t('errorInsecure')); return; }
         if (!(window.AudioContext || window.webkitAudioContext) || !window.AudioWorkletNode) { showError(t('errorUnsupported')); return; }
         initializing = true;
+        const startRevision = interruptionRevision;
         statusOverride = '';
         updateUI();
         try {
@@ -1830,6 +1842,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
             engine.port.onmessage = event => onAudioMessage(event.data || {});
             engine.onprocessorerror = () => {
               processorFailed = true;
+              stopStream();
               interruption(t('errorProcessorStopped'));
               statusOverride = t('errorProcessorStopped');
               updateUI();
@@ -1843,10 +1856,25 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
             video:false
           });
           attachStream(stream);
-          await context.resume();
-          send({type:'resume'});
-          needsResume = false;
-          statusOverride = '';
+          if (document.hidden || startRevision !== interruptionRevision) {
+            needsResume = true;
+            send({type:'interrupt'});
+            if (context.state === 'running') await context.suspend();
+            statusOverride = t('statusInterrupted');
+          } else {
+            await context.resume();
+            // A tab or audio-focus interruption can happen while resuming.
+            if (document.hidden || startRevision !== interruptionRevision || processorFailed) {
+              needsResume = true;
+              send({type:'interrupt'});
+              if (context.state === 'running') await context.suspend();
+              statusOverride = t('statusInterrupted');
+            } else {
+              send({type:'resume'});
+              needsResume = false;
+              statusOverride = '';
+            }
+          }
         } catch (error) {
           // A failed first AudioWorklet load must be retryable. Keeping a context
           // without its node would make every subsequent mic attempt fail.
@@ -1938,7 +1966,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         updateUI();
       }
       function openTrackDialog(index) {
-        if (!tracks[index] || isBusy() || exporting || $('#trackDialog').open) return;
+        if (!tracks[index] || isBusy() || exporting || processorFailed || $('#trackDialog').open) return;
         selectedPad = index;
         $('#trackDialogTitle').textContent = readableTrack(index) + ' ' + t('trackSettings');
         $('#gainInput').value = String(Math.round(tracks[index].gain * 100));
@@ -1950,7 +1978,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       function closeTrackDialog() { $('#trackDialog').close(); }
       function adjustSelected(name, value) {
-        if (selectedPad < 0 || !tracks[selectedPad] || isBusy() || exporting) return;
+        if (selectedPad < 0 || !tracks[selectedPad] || isBusy() || exporting || processorFailed) return;
         send({type:'adjust',index:selectedPad,[name]:value});
       }
       async function deleteSelected() {
@@ -2164,7 +2192,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         if (event.code==='Space') {event.preventDefault();togglePause();}
       });
       document.addEventListener('visibilitychange',()=>{
-        if (document.hidden && context && engine) interruption('');
+        if (document.hidden && context && engine && activeMic) interruption('');
       });
       window.addEventListener('pagehide',()=>{stopStream();if(context)context.close().catch(()=>{});});
       window.addEventListener('beforeunload',event=>{
