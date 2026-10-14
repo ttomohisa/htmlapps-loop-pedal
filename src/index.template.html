@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#f5f5f2">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Single HTML App Starter</title>
+  <title>Loop Pedal</title>
   <link rel="icon" href="__APP_ICON_DATA_URI__">
   <style>
     :root {
@@ -439,6 +439,85 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
+  
+    /* APP:STYLE:BEGIN -- Loop Pedal application */
+    .lp-workspace {display:grid; gap:16px; max-width:780px; margin-inline:auto;}
+    .lp-intro {margin:0 0 2px;color:var(--muted);font-size:14px;}
+    .lp-settings {display:flex;flex-wrap:wrap;align-items:end;gap:10px 14px;padding:14px;background:var(--surface-muted);border-radius:12px;}
+    .lp-field {display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:650;}
+    .lp-field input,.lp-field select,.lp-input {min-width:0;min-height:44px;border:1px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--text);padding:8px 12px;font-size:15px;}
+    .lp-field input {width:96px;}
+    .lp-field select {min-width:102px;}
+    .lp-field.wide {flex:1 1 180px;}
+    .lp-field.wide select {width:100%;}
+    .lp-settings-note {width:100%;font-size:12px;color:var(--muted);margin:0;}
+    .lp-record-info {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+    .lp-status {font-size:13px;line-height:1.55;font-weight:700;color:var(--accent);min-height:21px;}
+    .lp-status.error {color:var(--danger);}
+    .lp-sample-info {font-size:12px;color:var(--muted);}
+    .lp-pad-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .lp-pad-wrap {position:relative;min-width:0;}
+    .lp-pad {display:flex; flex-direction:column;align-items:flex-start;justify-content:space-between;gap:10px;width:100%;min-height:158px;
+      padding:16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);
+      text-align:left;cursor:pointer; transition:background .13s,border-color .13s; }
+    .lp-pad:hover {border-color:var(--accent);}
+    .lp-pad:disabled {opacity:.62;cursor:not-allowed;}
+    .lp-pad.has-take {border-color:var(--accent);background:var(--accent-soft);}
+    .lp-pad.is-muted {border-style:dashed;background:var(--surface-muted);}
+    .lp-pad.is-queued {border-color:#a97724;background:#fff6df;}
+    .lp-pad.is-recording {border-color:var(--danger);background:#fff0ee;}
+    .lp-pad.is-recording .lp-pad-mark {color:var(--danger);}
+    .lp-pad-heading {font-size:13px;font-weight:760;color:var(--muted);}
+    .lp-pad-mark {width:27px;height:27px;color:var(--accent);}
+    .lp-pad-status {font-size:15px;font-weight:800;line-height:1.3;max-width:100%;overflow-wrap:anywhere;}
+    .lp-pad-sub {font-size:11px;color:var(--muted);font-weight:500;}
+    .lp-pad-menu {position:absolute;top:9px;right:9px;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:12px;background:transparent;cursor:pointer;}
+    .lp-pad-menu svg {width:21px;height:21px;}
+    .lp-pad-menu:hover {background:rgba(22,98,79,.13);}
+    .lp-pad-menu[hidden] {display:none;}
+    .lp-beats {display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px;max-width:440px;}
+    .lp-beats span {height:11px;border-radius:20px;background:var(--line);}
+    .lp-beats span.active {background:var(--accent);}
+    .lp-beats span.recording {background:var(--danger);}
+    .lp-meter {display:grid;gap:8px;padding:14px;border-radius:12px;background:var(--surface-muted);}
+    .lp-meter-head {display:flex;gap:8px;justify-content:space-between;align-items:center;font-size:13px;}
+    .lp-actions {display:flex;flex-wrap:wrap;gap:8px;}
+    .lp-actions .button {min-height:44px;}
+    .lp-actions .button:disabled,.lp-export .button:disabled {opacity:.5;cursor:not-allowed;}
+    .lp-export {display:grid;gap:12px;padding:15px;border:1px solid var(--line);border-radius:12px;background:var(--surface);}
+    .lp-export-head {display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .lp-export-row {display:flex;align-items:end;gap:10px;flex-wrap:wrap;}
+    .lp-export-row .lp-field:first-child {flex:1 1 175px;}
+    .lp-filename {display:flex;align-items:center;gap:0;}
+    .lp-filename input {width:100%;min-width:0;border-radius:9px 0 0 9px;}
+    .lp-filename span {padding:11px;background:var(--surface-muted);border:1px solid var(--line-strong);border-left:0;border-radius:0 9px 9px 0;color:var(--muted);font-size:13px;}
+    .lp-export-result {min-height:20px;color:var(--muted);font-size:12px;overflow-wrap:anywhere;}
+    .lp-dialog {width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 24px);border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--text);padding:0;box-shadow:var(--shadow-md);}
+    .lp-dialog::backdrop {background:rgba(0,0,0,.45);}
+    .lp-dialog-inner {display:grid;gap:14px;padding:18px;max-height:calc(100dvh - 24px);overflow:auto;}
+    .lp-dialog-head {display:flex;align-items:center;justify-content:space-between;gap:16px;}
+    .lp-dialog-head h2 {margin:0;font-size:18px;}
+    .lp-dialog-close {width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;}
+    .lp-dialog-note {color:var(--muted);font-size:12px;margin:0;}
+    .lp-dialog .lp-field input[type=range] {width:100%;border:0;padding:5px 0;}
+    .lp-dialog-row {display:flex;gap:9px;flex-wrap:wrap;}
+    .lp-dialog-row .button {min-height:44px;}
+    .lp-label {font-weight:720;font-size:13px;}
+    .lp-warning {margin:0;color:var(--muted);font-size:13px;}
+    @media(max-width:520px) {
+      .lp-workspace {gap:13px;}
+      .lp-settings {padding:11px;gap:8px;}
+      .lp-field.wide {flex:1 1 100%;}
+      .lp-pad-grid {gap:9px;}
+      .lp-pad {min-height:143px;padding:13px;}
+      .lp-pad-menu {top:4px;right:4px;}
+      .lp-pad-heading {font-size:12px;}
+      .lp-pad-status {font-size:14px;}
+      .lp-actions .button {flex:1 1 auto;}
+      .lp-export-row .lp-field {flex:1 1 100%;}
+    }
+    /* APP:STYLE:END */
+
   </style>
 </head>
 <body>
@@ -462,81 +541,138 @@
     </div>
   </header>
 
+
   <main class="main">
     <section class="page-intro" aria-labelledby="heroTitle">
       <div>
-        <h2 id="heroTitle" data-i18n="introTitle">単一HTMLアプリのスターター</h2>
-        <p data-i18n="lead">PDF Organizerと同じ、固定依存・完全内包・実行時通信なしの構成から、新しいブラウザーアプリを作れます。</p>
+        <h2 id="heroTitle" data-i18n="introTitle">音を録って、重ねてみよう</h2>
+        <p data-i18n="lead">4つのパッドに録った音を、同じ長さで繰り返し再生します。</p>
       </div>
       <div class="local-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-5"/></svg>
-        <span data-i18n="localBadge">実行時通信なし</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-5"/></svg>
+        <span data-i18n="localBadge">音声を送信しません</span>
       </div>
     </section>
-
-    <!-- APP:BEGIN Replace this demo workspace with the real application. -->
-    <section class="shell workspace" aria-labelledby="workspaceTitle">
-      <div class="workspace-head">
+    <!-- APP:BEGIN Loop Pedal -->
+    <section class="shell workspace lp-workspace" aria-labelledby="workspaceTitle">
+      <div class="lp-record-info">
         <div>
-          <h2 id="workspaceTitle" data-i18n="workspaceTitle">Starter workspace</h2>
-          <p data-i18n="workspaceBody">Text stays in this browser. It is never sent by this app.</p>
+          <h2 id="workspaceTitle" data-i18n="workspaceTitle">ループ録音</h2>
+          <p class="lp-intro" data-i18n="workspaceBody">最初は4拍のカウント後に録音。2つ目からは次のループで録音します。</p>
         </div>
-        <div class="stats" aria-live="polite">
-          <div class="stat"><span class="stat-value" id="characterCount">0</span><span class="stat-label" data-i18n="characters">Characters</span></div>
-          <div class="stat"><span class="stat-value" id="wordCount">0</span><span class="stat-label" data-i18n="words">Words</span></div>
-          <div class="stat"><span class="stat-value" id="lineCount">0</span><span class="stat-label" data-i18n="lines">Lines</span></div>
+        <button class="button primary" id="micButton" type="button" data-i18n="startMic">マイクを使って録音</button>
+      </div>
+      <div class="lp-settings" aria-label="録音設定">
+        <label class="lp-field"><span data-i18n="bpm">テンポ (BPM)</span><input id="bpmInput" type="number" min="40" max="200" step="1" inputmode="numeric" value="100"></label>
+        <label class="lp-field"><span data-i18n="bars">小節数</span><select id="barsSelect"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option></select></label>
+        <label class="lp-field wide"><span data-i18n="recordingMode">録音方式</span><select id="modeSelect">
+          <option value="speaker" data-i18n="modeSpeaker">スマホだけで録音（録音中は無音）</option>
+          <option value="headphones" data-i18n="modeHeadphones">イヤホンで重ね録り</option>
+        </select></label>
+        <p class="lp-settings-note" id="modeNote" data-i18n="modeNoteSpeaker">録音中はほかの音が聞こえません。音を聴きながら重ねる場合はイヤホン方式にしてください。</p>
+      </div>
+      <div class="lp-record-info">
+        <div class="lp-status" id="engineStatus" role="status" aria-live="polite">録音を始めるにはマイクを準備してください。</div>
+        <span class="lp-sample-info" id="sampleInfo" aria-live="off">100 BPM · 2小節</span>
+      </div>
+      <div class="lp-pad-grid" id="padGrid">
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad0" type="button" data-pad="0" disabled aria-describedby="padSub0">
+          <span class="lp-pad-heading" id="padName0">音 1</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus0">録音する</span>
+          <span class="lp-pad-sub" id="padSub0">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu0" data-manage="0" hidden aria-label="音 1 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div>
+
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad1" type="button" data-pad="1" disabled aria-describedby="padSub1">
+          <span class="lp-pad-heading" id="padName1">音 2</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus1">録音する</span>
+          <span class="lp-pad-sub" id="padSub1">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu1" data-manage="1" hidden aria-label="音 2 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div>
+
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad2" type="button" data-pad="2" disabled aria-describedby="padSub2">
+          <span class="lp-pad-heading" id="padName2">音 3</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus2">録音する</span>
+          <span class="lp-pad-sub" id="padSub2">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu2" data-manage="2" hidden aria-label="音 3 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div>
+
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad3" type="button" data-pad="3" disabled aria-describedby="padSub3">
+          <span class="lp-pad-heading" id="padName3">音 4</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus3">録音する</span>
+          <span class="lp-pad-sub" id="padSub3">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu3" data-manage="3" hidden aria-label="音 4 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div></div>
+      <div class="lp-meter" aria-label="拍と小節">
+        <div class="lp-meter-head"><strong id="beatLabel" aria-live="off">準備中</strong><span id="progressLabel">—</span></div>
+        <div class="lp-beats" id="beatMarkers" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
       </div>
-      <label class="sr-only" for="editor" data-i18n="editorLabel">Text editor</label>
-      <textarea id="editor" spellcheck="true"></textarea>
-      <div class="export-row">
-        <label class="export-field" for="outputFilename">
-          <span class="export-label" data-i18n="outputFilename">出力ファイル名</span>
-          <span class="filename-control">
-            <input class="filename-input" id="outputFilename" type="text" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="outputFilenameHint">
-            <span class="filename-extension" aria-hidden="true">.txt</span>
-          </span>
-          <span class="sr-only" id="outputFilenameHint" data-i18n="outputFilenameHint">拡張子は自動で .txt が付きます</span>
-        </label>
+      <div class="lp-actions">
+        <button class="button" id="pauseButton" type="button" disabled data-i18n="pause">一時停止</button>
+        <button class="button danger" id="abortButton" type="button" disabled data-i18n="abort">録音を中止</button>
+        <button class="button" id="undoButton" type="button" disabled data-i18n="undoRecord">最後の録音を取り消す</button>
+        <button class="button" id="resetButton" type="button" disabled data-i18n="newLoop">新しいループを作る</button>
       </div>
-      <div class="toolbar">
-        <div class="button-row">
-          <button class="button primary" id="copyButton" type="button" data-i18n="copy">Copy</button>
-          <button class="button" id="downloadButton" type="button" data-i18n="download">Download text</button>
-          <button class="button" id="sampleButton" type="button" data-i18n="sample">Restore sample</button>
+      <section class="lp-export" aria-label="音声保存">
+        <div class="lp-export-head"><h3 class="section-title" data-i18n="exportTitle">音声を保存</h3><span class="lp-sample-info">PCM WAV · 16-bit · mono</span></div>
+        <div class="lp-export-row">
+          <label class="lp-field" for="outputFilename"><span data-i18n="outputFilename">ファイル名</span>
+            <span class="lp-filename"><input id="outputFilename" class="lp-input" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="filenameNote"><span>.wav</span></span>
+          </label>
+          <label class="lp-field" for="exportDuration"><span data-i18n="duration">長さ</span>
+            <select id="exportDuration"><option value="loop" data-i18n="durationLoop">ループ1回</option><option value="30" data-i18n="duration30">30秒</option><option value="60" data-i18n="duration60">60秒</option></select>
+          </label>
+          <button class="button primary" id="downloadButton" type="button" disabled data-i18n="downloadWav">WAVを保存</button>
         </div>
-        <div class="button-row">
-          <button class="button danger" id="clearButton" type="button" data-i18n="clear">Clear</button>
-        </div>
-        <span class="save-status" id="saveStatus" data-i18n="savedLocally">Saved locally</span>
-      </div>
+        <span class="sr-only" id="filenameNote" data-i18n="filenameHint">拡張子 .wav は自動で付きます</span>
+        <div class="lp-export-result" id="exportResult" role="status" aria-live="polite"></div>
+      </section>
+      <p class="lp-warning" data-i18n="memoryNote">録音は一時的なものです。ページを閉じると消えます。必要な音声は保存してください。</p>
     </section>
     <!-- APP:END -->
-
-    <section class="shell section" aria-labelledby="guaranteesTitle">
-      <div class="section-head">
-        <h2 class="section-title" id="guaranteesTitle" data-i18n="guaranteesTitle">Template guarantees</h2>
-        <p data-i18n="guaranteesBody">Keep these constraints unless the product specification explicitly changes them.</p>
-      </div>
-      <div class="card-grid">
-        <article class="card"><div class="card-number">01</div><h3 data-i18n="card1Title">One deliverable</h3><p data-i18n="card1Body">The release artifact is dist/index.html. It opens directly and can be hosted as a static page.</p></article>
-        <article class="card"><div class="card-number">02</div><h3 data-i18n="card2Title">Pinned dependencies</h3><p data-i18n="card2Body">Third-party npm assets are version-pinned, hashed, and embedded during the build.</p></article>
-        <article class="card"><div class="card-number">03</div><h3 data-i18n="card3Title">No runtime network</h3><p data-i18n="card3Body">Content Security Policy blocks runtime connections. User data stays inside the page.</p></article>
-        <article class="card"><div class="card-number">04</div><h3 data-i18n="card4Title">LLM-ready workflow</h3><p data-i18n="card4Body">AGENTS.md and APP_SPEC.md give coding agents a stable contract, acceptance criteria, and handoff format.</p></article>
-      </div>
-    </section>
-
     <section class="shell section">
       <details>
-        <summary data-i18n="buildInfo">Build information</summary>
+        <summary data-i18n="buildInfo">ビルド情報</summary>
         <div class="build-grid">
-          <div class="build-item"><span data-i18n="appVersion">App version</span><strong id="buildVersion">—</strong></div>
-          <div class="build-item"><span data-i18n="builtAt">Built at</span><strong id="builtAt">—</strong></div>
-          <div class="build-item"><span data-i18n="dependencies">Embedded dependencies</span><strong id="dependencyCount">0</strong></div>
+          <div class="build-item"><span data-i18n="appVersion">アプリバージョン</span><strong id="buildVersion">—</strong></div>
+          <div class="build-item"><span data-i18n="builtAt">生成日時</span><strong id="builtAt">—</strong></div>
+          <div class="build-item"><span data-i18n="dependencies">内包依存数</span><strong id="dependencyCount">0</strong></div>
         </div>
       </details>
     </section>
   </main>
+  <dialog class="lp-dialog" id="trackDialog" aria-labelledby="trackDialogTitle">
+    <div class="lp-dialog-inner">
+      <div class="lp-dialog-head"><h2 id="trackDialogTitle">音 1 の設定</h2>
+        <button type="button" class="lp-dialog-close" id="closeTrackDialog" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <label class="lp-field"><span data-i18n="trackGain">音量</span><input id="gainInput" type="range" min="0" max="100" step="1" value="100"></label>
+      <output id="gainValue">100%</output>
+      <label class="lp-field"><span data-i18n="trackOffset">録音位置を調整（ミリ秒）</span><input id="shiftInput" type="range" min="-200" max="200" step="5" value="0"></label>
+      <output id="shiftValue">0 ms</output>
+      <p class="lp-dialog-note" data-i18n="offsetHelp">マイナスで早く、プラスで遅く鳴ります。元の音声は変わりません。</p>
+      <div class="lp-dialog-row">
+        <button type="button" class="button primary" id="rerecordButton" data-i18n="rerecord">録り直す</button>
+        <button type="button" class="button danger" id="deleteTrackButton" data-i18n="deleteTrack">この音を消す</button>
+      </div>
+    </div>
+  </dialog>
 
   <footer><span id="footerName">Single HTML App Starter</span> · MIT License · <span data-i18n="footer">Generated as one self-contained HTML file</span></footer>
   <div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" data-tone="default">
@@ -569,27 +705,276 @@
       </button>
     </div>
     <div class="dialog-body">
-      <!-- APP:HELP:BEGIN Update this section together with the real application. -->
+
+      <!-- APP:HELP:BEGIN Loop Pedal user guide -->
       <h3 data-i18n="helpBasicsTitle">基本操作</h3>
       <ol>
-        <li data-i18n="helpStep1">作業領域へテキストを入力します。内容は入力のたびに端末内へ保存されます。</li>
-        <li data-i18n="helpStep2">出力ファイル名を必要に応じて変更し、「コピー」または「テキスト保存」で入力内容を取り出せます。</li>
-        <li data-i18n="helpStep3">「サンプルに戻す」や「消去」の直後は、トーストの「元に戻す」から取り消せます。</li>
+        <li data-i18n="helpStep1">「マイクを使って録音」を選び、端末からマイクの許可を求められたら許可します。</li>
+        <li data-i18n="helpStep2">空のパッドを押します。4拍カウント後に録音し、設定した小節数で自動終了します。</li>
+        <li data-i18n="helpStep3">次の空パッドを押すと、次のループ先頭から自動録音。録音済みパッドを押すとミュートできます。</li>
+        <li data-i18n="helpStep4">パッド右上の設定から録り直し・音量・位置の調整ができます。WAVで保存できます。</li>
       </ol>
-
+      <h3 data-i18n="helpModeTitle">録音方式</h3>
+      <p data-i18n="helpModeBody">「スマホだけで録音」では、録音中に既存ループやクリック音は鳴りません。音を聴きながら重ねる場合は「イヤホンで重ね録り」を選んでください。有線イヤホンを推奨します。Bluetoothは録音位置がずれる場合があります。</p>
       <h3 data-i18n="helpPrivacyTitle">プライバシー</h3>
-      <p data-i18n="helpPrivacyBody">入力内容と操作はブラウザー内で処理され、このアプリから外部へ送信されません。必要なコードと依存ファイルも配布用HTMLに内包されます。</p>
-
+      <p data-i18n="helpPrivacyBody">録音した音はブラウザ内で処理し、このアプリから外部へ送信しません。マイクの許可は録音の準備操作後にのみ求めます。</p>
       <h3 data-i18n="helpNotesTitle">注意事項</h3>
       <ul>
-        <li data-i18n="helpNoteStorage">ブラウザーのサイトデータを削除すると、端末内に保存した入力内容も消える場合があります。必要な内容はファイルとして保存してください。</li>
-        <li data-i18n="helpNoteBrowser">一部の機能はブラウザーの制限や端末性能の影響を受けます。重要な成果物は保存後に内容を確認してください。</li>
-        <li data-i18n="helpNoteTemplate">この画面はスターターの例です。新しいアプリを作る際は、機能と一緒にこのヘルプも実際の操作へ書き換えます。</li>
+        <li data-i18n="helpNoteStorage">録音はメモリにのみ保持します。ページの更新・終了で消えます。必要な音声はWAVで保存してください。</li>
+        <li data-i18n="helpNoteBrowser">画面ロック、着信、タブ切り替え、マイクの切断で録音が止まる場合があります。復帰後は明示的に再開してください。</li>
+        <li data-i18n="helpNoteLatency">端末や接続方式による録音遅延は完全には自動補正できません。パッドの設定からタイミングを調整してください。</li>
       </ul>
-      <p class="dialog-note" data-i18n="helpOffline">配布物は dist/index.html ひとつです。ローカルで直接開くことも、GitHub Pagesで公開することもできます。</p>
+      <p class="dialog-note" data-i18n="helpOffline">音声処理に外部サービスは使いません。配布HTMLは単一ファイルですが、マイクや音声処理はブラウザの対応状況に左右されます。</p>
       <!-- APP:HELP:END -->
     </div>
   </dialog>
+
+  <script type="text/plain" id="loopWorkletSource">
+
+/* Loop Pedal: sample-frame aligned microphone recorder and four-track mixer.
+   The audio thread is the only source of truth for recording boundaries. */
+class LoopPedalProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.rate = sampleRate;
+    this.bpm = 100;
+    this.bars = 2;
+    this.length = this.computeLength();
+    this.beat = Math.round(this.rate * 60 / this.bpm);
+    this.phase = 0;
+    this.countPosition = 0;
+    this.state = 'ready';
+    this.pending = null;
+    this.tracks = [null, null, null, null];
+    this.undo = null;
+    this.generation = 0;
+    this.reportCounter = 0;
+    this.port.onmessage = event => this.handle(event.data || {});
+    this.report('ready');
+  }
+  computeLength() {
+    return Math.round(this.rate * 60 / this.bpm * 4 * this.bars);
+  }
+  hasTracks() {
+    return this.tracks.some(Boolean);
+  }
+  summary() {
+    return this.tracks.map(track => track ? {
+      gain: track.gain, muted: track.muted, shiftMs: track.shiftMs
+    } : null);
+  }
+  report(kind, extra) {
+    this.port.postMessage(Object.assign({
+      kind: kind, generation: this.generation, state: this.state,
+      phase: this.phase, length: this.length, rate: this.rate,
+      countPosition: this.countPosition,
+      position: this.pending ? this.pending.position : 0,
+      pendingIndex: this.pending ? this.pending.index : -1,
+      undo: !!this.undo, summary: this.summary()
+    }, extra || {}));
+  }
+  handle(msg) {
+    if (msg.type === 'configure') {
+      if (this.hasTracks() || this.pending) return;
+      this.bpm = Math.max(40, Math.min(200, Math.round(Number(msg.bpm) || 100)));
+      this.bars = [1, 2, 4].includes(msg.bars) ? msg.bars : 2;
+      this.length = this.computeLength();
+      this.beat = Math.round(this.rate * 60 / this.bpm);
+      this.phase = 0;
+      this.report('configured');
+    } else if (msg.type === 'queue') {
+      if (this.pending || !Number.isInteger(msg.index) || msg.index < 0 || msg.index > 3) return;
+      if (!['ready', 'playing', 'paused'].includes(this.state)) return;
+      try {
+        const buffer = new Float32Array(this.length);
+        const remaining = this.length - this.phase;
+        const loops = this.hasTracks() ? (remaining < this.rate * 0.25 ? 2 : 1) : 0;
+        this.pending = {
+          index: msg.index, mode: msg.mode === 'headphones' ? 'headphones' : 'speaker',
+          buffer: buffer, position: 0, loops: loops
+        };
+        if (!this.hasTracks()) {
+          this.countPosition = 0;
+          this.state = 'count-in';
+        } else {
+          this.state = 'queued';
+        }
+        this.report('queued');
+      } catch (error) {
+        this.pending = null;
+        this.report('error', {reason: 'allocation'});
+      }
+    } else if (msg.type === 'abort') {
+      this.abort();
+    } else if (msg.type === 'pause' || msg.type === 'interrupt') {
+      this.pending = null;
+      this.state = this.hasTracks() ? 'paused' : 'ready';
+      this.report(msg.type === 'interrupt' ? 'interrupted' : 'paused');
+    } else if (msg.type === 'resume') {
+      if (!this.pending) {
+        this.state = this.hasTracks() ? 'playing' : 'ready';
+        this.report('resumed');
+      }
+    } else if (msg.type === 'undo') {
+      if (!this.undo || this.pending) return;
+      this.tracks[this.undo.index] = this.undo.previous;
+      this.undo = null;
+      if (!this.hasTracks()) { this.phase = 0; this.state = 'ready'; }
+      this.report('undone');
+    } else if (msg.type === 'delete') {
+      if (this.pending || !Number.isInteger(msg.index) || msg.index < 0 || msg.index > 3) return;
+      this.tracks[msg.index] = null;
+      this.undo = null;
+      if (!this.hasTracks()) { this.phase = 0; this.state = 'ready'; }
+      this.report('deleted');
+    } else if (msg.type === 'clear') {
+      this.generation = Number.isInteger(msg.generation) ? msg.generation : this.generation + 1;
+      this.tracks = [null, null, null, null];
+      this.undo = null;
+      this.pending = null;
+      this.phase = 0;
+      this.countPosition = 0;
+      this.state = 'ready';
+      this.report('cleared');
+    } else if (msg.type === 'adjust') {
+      const t = this.tracks[msg.index];
+      if (!t || this.pending && this.pending.index === msg.index) return;
+      if (typeof msg.muted === 'boolean') t.muted = msg.muted;
+      if (Number.isFinite(msg.gain)) t.gain = Math.max(0, Math.min(1, msg.gain));
+      if (Number.isFinite(msg.shiftMs)) {
+        t.shiftMs = Math.max(-200, Math.min(200, Math.round(msg.shiftMs / 5) * 5));
+        const target = Math.round(t.shiftMs * this.rate / 1000);
+        if (target !== t.targetShift) {
+          t.shift = t.targetShift;
+          t.targetShift = target;
+          t.shiftFade = 256;
+        }
+      }
+      this.report('adjusted');
+    } else if (msg.type === 'snapshot') {
+      this.port.postMessage({
+        kind: 'snapshot', generation: this.generation, requestId: msg.requestId,
+        length: this.length, rate: this.rate,
+        tracks: this.tracks.map(t => t ? {
+          pcm: t.pcm, gain: t.gain, muted: t.muted, shiftMs: t.shiftMs
+        } : null)
+      });
+    }
+  }
+  abort() {
+    if (!this.pending) return;
+    this.pending = null;
+    this.state = this.hasTracks() ? 'playing' : 'ready';
+    this.report('aborted');
+  }
+  beginRecording() {
+    if (!this.pending) return;
+    this.pending.position = 0;
+    this.state = 'recording';
+    this.report('recording');
+  }
+  finishRecording() {
+    const p = this.pending;
+    if (!p) return;
+    const previous = this.tracks[p.index];
+    this.tracks[p.index] = previous ? {
+      pcm: p.buffer, gain: previous.gain, muted: false,
+      shiftMs: previous.shiftMs, shift: previous.targetShift,
+      targetShift: previous.targetShift, shiftFade: 0,
+      smooth: previous.gain
+    } : {
+      pcm: p.buffer, gain: 1, muted: false, shiftMs: 0,
+      shift: 0, targetShift: 0, shiftFade: 0, smooth: 1
+    };
+    this.undo = {index: p.index, previous: previous};
+    this.pending = null;
+    this.state = 'playing';
+    this.report('committed', {index: p.index});
+  }
+  advance() {
+    this.phase++;
+    if (this.phase >= this.length) {
+      this.phase = 0;
+      if (this.state === 'queued' && this.pending) {
+        this.pending.loops--;
+        if (this.pending.loops <= 0) this.beginRecording();
+      }
+    }
+  }
+  // Signed shiftMs is perceived movement in time; negative means earlier.
+  mix(frame, excludedIndex) {
+    let sum = 0;
+    for (let n = 0; n < 4; n++) {
+      const t = this.tracks[n];
+      if (!t || n === excludedIndex) continue;
+      const destination = t.muted ? 0 : t.gain;
+      t.smooth += (destination - t.smooth) * 0.012;
+      let i = (frame - t.shift + this.length) % this.length;
+      let sample = t.pcm[i];
+      if (t.shiftFade > 0) {
+        const j = (frame - t.targetShift + this.length) % this.length;
+        const blend = 1 - t.shiftFade / 256;
+        sample = sample * (1 - blend) + t.pcm[j] * blend;
+        t.shiftFade--;
+        if (!t.shiftFade) t.shift = t.targetShift;
+      }
+      sum += sample * t.smooth;
+    }
+    // Shared with offline WAV export: smooth peak protection, never wrap int16.
+    return Math.tanh(sum * 0.7);
+  }
+  clickSample() {
+    const within = this.countPosition % this.beat;
+    const duration = Math.max(1, Math.round(this.rate * 0.017));
+    if (within >= duration) return 0;
+    const amp = this.countPosition < this.beat ? 0.19 : 0.12;
+    return amp * Math.sin(2 * Math.PI * 960 * within / this.rate) * (1 - within / duration);
+  }
+  process(inputs, outputs) {
+    const output = outputs[0] && outputs[0][0];
+    if (!output) return true;
+    const input = inputs[0] || [];
+    const left = input[0];
+    const right = input[1];
+    for (let i = 0; i < output.length; i++) {
+      if (this.state === 'count-in') {
+        output[i] = this.clickSample();
+        this.countPosition++;
+        if (this.countPosition >= this.beat * 4) {
+          this.phase = 0;
+          this.beginRecording();
+        }
+      } else if (this.state === 'recording' && this.pending) {
+        const p = this.pending;
+        output[i] = p.mode === 'headphones' ? this.mix(this.phase, p.index) : 0;
+        const raw = left ? (right ? (left[i] + right[i]) * 0.5 : left[i]) : 0;
+        p.buffer[p.position++] = Number.isFinite(raw) ? raw : 0;
+        this.advance();
+        if (p.position >= this.length) this.finishRecording();
+      } else if (this.state === 'playing' || this.state === 'queued') {
+        output[i] = this.mix(this.phase, -1);
+        this.advance();
+      } else {
+        output[i] = 0;
+      }
+    }
+    this.reportCounter += output.length;
+    if (this.reportCounter >= Math.max(1024, this.rate / 18)) {
+      this.reportCounter = 0;
+      this.port.postMessage({
+        kind: 'tick', generation: this.generation, state: this.state,
+        phase: this.phase, countPosition: this.countPosition,
+        position: this.pending ? this.pending.position : 0,
+        pendingIndex: this.pending ? this.pending.index : -1,
+        length: this.length, rate: this.rate
+      });
+    }
+    return true;
+  }
+}
+registerProcessor('loop-pedal-processor', LoopPedalProcessor);
+
+  </script>
 
   <script>
     (() => {
