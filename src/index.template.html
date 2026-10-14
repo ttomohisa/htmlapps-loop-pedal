@@ -1686,6 +1686,8 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#bpmInput').disabled = busy || any || exporting;
         $('#barsSelect').disabled = busy || any || exporting;
         $('#modeSelect').disabled = busy || exporting;
+        $('#outputFilename').disabled = exporting;
+        $('#exportDuration').disabled = exporting;
         $('#sampleInfo').textContent = $('#bpmInput').value + ' BPM · ' + $('#barsSelect').value + (language === 'ja' ? '小節' : ' bars') + (audioRate ? ' · ' + Math.round(audioRate / 1000 * 10) / 10 + ' kHz' : '');
         updateAudioDiagnostics();
         for (let i = 0; i < 4; i++) {
@@ -2072,10 +2074,14 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       function normalizedFilename() {
         const fallback = defaultFilename();
-        let base = $('#outputFilename').value.trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g,'-')
-          .replace(/[.\s]+$/g,'').replace(/\.wav$/i,'').trim();
+        // Also remove bidi controls to avoid misleading displayed extensions.
+        let base = $('#outputFilename').value.trim()
+          .replace(/[\\/:*?"<>|\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g,'-')
+          .replace(/\.wav$/i,'')
+          .replace(/[.\s]+$/g,'').trim();
         if (!base || base === '.' || base === '..') base = fallback;
-        if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base)) base += '-audio';
+        // Device names remain reserved on Windows even when an extension follows.
+        if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(base)) base += '-audio';
         base = base.slice(0,110);
         $('#outputFilename').value = base;
         return base;
@@ -2103,71 +2109,157 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         }
         return sample * take.gain;
       }
-      async function encodeWav(snapshot,duration) {
+      function canceledExportError() {
+        const error = new Error('Export canceled');
+        error.name = 'AbortError';
+        return error;
+      }
+      function updateExportProgress(value) {
+        const progress = $('#exportProgress');
+        const pct = Math.max(0, Math.min(100, Math.round(value)));
+        progress.value = pct;
+        $('#exportProgressText').textContent = pct + '%';
+      }
+      function cancelExport() {
+        const job = activeExportJob;
+        if (!job || job.cancelled) return;
+        job.cancelled = true;
+        setExportNotice('exportCanceling');
+        const request = exportRequests.get(job.requestId);
+        if (request) {
+          clearTimeout(request.timeout);
+          exportRequests.delete(job.requestId);
+          request.reject(canceledExportError());
+        }
+      }
+      async function encodeWav(snapshot,duration,job,onProgress=()=>{}) {
         const length = snapshot.length;
         const rate = snapshot.rate;
         const frames = duration === 'loop' ? length : Math.round(rate*Number(duration));
-        if (!length || !rate || !Number.isSafeInteger(frames) || frames <= 0 || frames > 30000000) throw new Error('Invalid output size');
+        if (!Number.isSafeInteger(length) || length <= 0 || !Number.isInteger(rate) ||
+            rate <= 0 || !Number.isSafeInteger(frames) || frames <= 0 ||
+            frames > 30000000 || 44+frames*2 > 0xffffffff) {
+          throw new Error('Invalid output size');
+        }
+        if (!Array.isArray(snapshot.tracks) || snapshot.tracks.length !== 4 ||
+            snapshot.tracks.some(take => take && (!take.pcm ||
+            take.pcm.length !== length || !Number.isFinite(take.gain) ||
+            !Number.isFinite(take.shiftMs)))) {
+          throw new Error('Invalid track snapshot');
+        }
+        // A single full-size output buffer; no duplicate full-length mix array.
         const buffer = new ArrayBuffer(44+frames*2);
         const view = new DataView(buffer);
         wavHeader(view,frames,rate);
         const seamSamples = Math.max(2,Math.round(rate * 0.004));
-        const audible = snapshot.tracks.filter(track=>track && !track.muted && track.gain>0)
-          .map(track => {
-            const seamStart = Math.max(0, track.pcm.length - Math.min(seamSamples, Math.floor(track.pcm.length / 4)));
-            const boundaryDifference = track.pcm[0] - track.pcm[track.pcm.length - 1];
-            return {...track, seamStart, seamDelta: Math.abs(boundaryDifference) < 0.02 ? 0 : boundaryDifference};
+        const audible = snapshot.tracks.filter(take=>take && !take.muted && take.gain>0)
+          .map(take => {
+            const seamStart = Math.max(0, take.pcm.length -
+              Math.min(seamSamples, Math.floor(take.pcm.length / 4)));
+            const boundaryDifference = take.pcm[0] - take.pcm[take.pcm.length - 1];
+            return {...take, seamStart,
+              seamDelta: Math.abs(boundaryDifference) < 0.02 ? 0 : boundaryDifference};
           });
         const fadeFrames = duration === 'loop' ? 0 : Math.min(frames,Math.round(rate*0.25));
         for (let start=0;start<frames;start+=8192) {
-          const end=Math.min(frames,start+8192);
+          if (job?.cancelled) throw canceledExportError();
+          const end = Math.min(frames,start+8192);
           for (let i=start;i<end;i++) {
             let sum=0;
             for (const take of audible) sum += playbackSample(take,i,length,rate);
             let sample=Math.tanh(sum*0.7);
-            if (fadeFrames && i>=frames-fadeFrames) sample*=Math.max(0,(frames-i-1)/fadeFrames);
+            if (fadeFrames && i>=frames-fadeFrames)
+              sample*=Math.max(0,(frames-i-1)/fadeFrames);
             sample=Math.max(-1,Math.min(1,sample));
             view.setInt16(44+i*2,sample<0?Math.round(sample*32768):Math.round(sample*32767),true);
           }
-          if (end<frames) {
-            $('#exportResult').textContent = t('exporting') + ' ' + Math.round(end/frames*100) + '%';
-            await new Promise(resolve=>setTimeout(resolve,0));
-          }
+          onProgress(end / frames * 100);
+          // Yield so the cancel button remains responsive even on smartphones.
+          if (end < frames) await new Promise(resolve => setTimeout(resolve, 0));
         }
+        if (job?.cancelled) throw canceledExportError();
         return buffer;
       }
-      function requestSnapshot() {
+      function requestSnapshot(job) {
         return new Promise((resolve,reject)=>{
-          const requestId=++exportIndex;
-          const timeout=setTimeout(()=>{exportRequests.delete(requestId);reject(new Error('Snapshot timeout'));},12000);
+          if (job.cancelled) {reject(canceledExportError());return;}
+          const requestId = ++exportIndex;
+          job.requestId = requestId;
+          const timeout = setTimeout(() => {
+            exportRequests.delete(requestId);
+            reject(new Error('Snapshot timeout'));
+          },12000);
           exportRequests.set(requestId,{resolve,reject,timeout});
           send({type:'snapshot',requestId});
         });
       }
       async function downloadWav() {
         if (!engine || !hasTakes() || isBusy() || exporting || processorFailed) return;
-        exporting=true;statusOverride='';updateUI();
-        $('#exportResult').textContent = t('exporting');
+        exporting = true;
+        const job = {cancelled:false,requestId:null};
+        activeExportJob = job;
+        const wasSuspended = context.state !== 'running';
+        const wasPlaying = state === 'playing' && !needsResume;
+        const sessionGeneration = generation;
+        const duration = $('#exportDuration').value;
+        const filename = normalizedFilename() + '.wav';
+        clearExportPreview();
+        $('#exportProgressWrap').hidden = false;
+        $('#exportProgress').removeAttribute('value');
+        $('#exportProgressText').textContent = '';
+        setExportNotice('exportPreparing');
+        updateUI();
         try {
-          const filename=normalizedFilename() + '.wav';
-          const wasSuspended=context.state!=='running';
+          // Pause first so a suspended context cannot produce a burst of
+          // playback audio merely to service a snapshot request.
+          send({type:needsResume ? 'interrupt' : 'pause'});
           if (wasSuspended) await context.resume();
-          // A paused/suspended processor processes the stop instruction first,
-          // then snapshots only fully committed tracks. No recording resumes.
-          if (needsResume) send({type:'interrupt'});
-          const snapshot=await requestSnapshot();
-          const wav=await encodeWav(snapshot,$('#exportDuration').value);
-          const url=URL.createObjectURL(new Blob([wav],{type:'audio/wav'}));
+          if (job.cancelled) throw canceledExportError();
+          if (sessionGeneration !== generation) throw new Error('Session changed');
+          const snapshot = await requestSnapshot(job);
+          if (job.cancelled) throw canceledExportError();
+          if (snapshot.generation !== sessionGeneration) throw new Error('Session changed');
+          setExportNotice('exporting');
+          updateExportProgress(0);
+          const wav = await encodeWav(snapshot,duration,job,updateExportProgress);
+          if (job.cancelled || sessionGeneration !== generation) throw canceledExportError();
+          const url = URL.createObjectURL(new Blob([wav],{type:'audio/wav'}));
+          exportedUrl = url;
+          $('#exportPreviewAudio').src = url;
+          $('#exportDownloadAgain').href = url;
+          $('#exportDownloadAgain').download = filename;
+          $('#exportPreviewBlock').hidden = false;
+          const seconds = (wav.byteLength-44)/2/snapshot.rate;
+          const size = (wav.byteLength/1048576).toFixed(2);
+          setExportNotice('exportReady', ' · ' + filename + ' · ' +
+            seconds.toFixed(1) + ' s · ' + size + ' MiB');
+          // Some mobile browsers suppress downloads after async work. Keep a
+          // real clickable download link visible as the explicit fallback.
           const a=document.createElement('a');
-          a.href=url; a.download=filename;
-          document.body.append(a);a.click();a.remove();
-          setTimeout(()=>URL.revokeObjectURL(url),5000);
-          $('#exportResult').textContent=t('exportReady') + ': ' + filename + ' · ' + Math.round((wav.byteLength-44)/2/snapshot.rate*10)/10 + ' s';
-          if (wasSuspended) await context.suspend();
-        } catch (err) {
-          $('#exportResult').textContent=t('exportFail');
-          AppToast.show({message:t('exportFail'),tone:'danger',duration:5000});
-        } finally { exporting=false;updateUI(); }
+          a.href=url;
+          a.download=filename;
+          document.body.append(a);
+          try { a.click(); } catch { /* The user can use the visible link. */ }
+          finally { a.remove(); }
+        } catch (error) {
+          if (error?.name === 'AbortError') setExportNotice('exportCanceled');
+          else {
+            setExportNotice('exportFail');
+            AppToast.show({message:t('exportFail'),tone:'danger',duration:5000});
+          }
+        } finally {
+          // Match the transport that was active before export. Never auto
+          // resume after an OS interruption or on a hidden page.
+          if (wasPlaying && !needsResume && !processorFailed &&
+              !document.hidden && context.state === 'running') send({type:'resume'});
+          if (wasSuspended && context.state === 'running') {
+            try { await context.suspend(); } catch { /* Context can close on pagehide. */ }
+          }
+          activeExportJob = null;
+          exporting = false;
+          $('#exportProgressWrap').hidden = true;
+          updateUI();
+        }
       }
 
       $('#languageButton').addEventListener('click',()=>{
