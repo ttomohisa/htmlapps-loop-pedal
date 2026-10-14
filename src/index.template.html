@@ -1677,6 +1677,16 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           send({type:'resume'});
           statusOverride = '';
         } catch (error) {
+          // A failed first AudioWorklet load must be retryable. Keeping a context
+          // without its node would make every subsequent mic attempt fail.
+          if (!engine && context) {
+            try { await context.close(); } catch { /* already closed */ }
+            context = null;
+          } else if (engine && activeMic) {
+            needsResume = true;
+            send({type:'interrupt'});
+          }
+          if (microphone && !activeMic) stopStream();
           const name = error?.name || '';
           if (name === 'NotAllowedError' || name === 'PermissionDeniedError') statusOverride = t('errorDenied');
           else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') statusOverride = t('errorNoDevice');
