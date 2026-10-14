@@ -1295,7 +1295,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "helpStep1": "「マイクを使って録音」を選び、端末からマイクの許可を求められたら許可します。",
           "helpStep2": "空のパッドを押します。4拍カウント後に録音し、設定した小節数で自動終了します。",
           "helpStep3": "次の空パッドを押すと、次のループ先頭から自動録音。録音済みパッドを押すとミュートできます。",
-          "helpStep4": "パッド右上の設定から録り直し・音量・位置の調整ができます。WAVで保存できます。",
+          "helpStep4": "パッド右上の設定から録り直し・音量・位置を調整できます。WAV作成中はループ再生を一時停止し、処理を中止できます。作成後は試聴・再ダウンロードできます。",
           "helpModeTitle": "録音方式",
           "helpModeBody": "「スマホだけで録音」では、録音中に既存ループやクリック音は鳴りません。音を聴きながら重ねる場合は「イヤホンで重ね録り」を選んでください。有線イヤホンを推奨します。Bluetoothは録音位置がずれる場合があります。",
           "helpPrivacyTitle": "プライバシー",
@@ -1442,7 +1442,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "helpStep1": "Choose Enable microphone and grant permission when your browser prompts.",
           "helpStep2": "Tap an empty pad. Recording starts after four count-in beats and stops after the selected number of bars.",
           "helpStep3": "Tap another empty pad. Recording begins at the next loop boundary. Tap a recorded pad to mute or unmute.",
-          "helpStep4": "Use the pad settings for re-recording, volume and timing. Export the combined audio as WAV.",
+          "helpStep4": "Use pad settings to re-record, adjust volume and timing. WAV creation pauses the loop temporarily and can be canceled. You can preview or download the result again.",
           "helpModeTitle": "Recording modes",
           "helpModeBody": "Phone only silences other tracks and metronome clicks during recording. To hear other tracks while recording, select headphones. Wired headphones are recommended; Bluetooth may add delay.",
           "helpPrivacyTitle": "Privacy",
@@ -2242,6 +2242,8 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           try { a.click(); } catch { /* The user can use the visible link. */ }
           finally { a.remove(); }
         } catch (error) {
+          // No incomplete output should remain clickable after a failed build.
+          clearExportPreview();
           if (error?.name === 'AbortError') setExportNotice('exportCanceled');
           else {
             setExportNotice('exportFail');
