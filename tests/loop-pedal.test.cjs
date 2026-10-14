@@ -295,3 +295,12 @@ test('loop phase remains exact after one thousand consecutive turns', () => {
   assert.equal(processor.state,'playing');
   assert.equal(processor.tracks[0].pcm.length,processor.length);
 });
+
+
+test('completed takes remain exportable while the microphone requires reconnection', () => {
+  assert.ok(app[1].includes("$('#downloadButton').disabled = !any || busy || exporting || !engine;"));
+  assert.ok(app[1].includes("if (needsResume) send({type:'interrupt'});"));
+  assert.ok(app[1].includes("if (wasSuspended) await context.suspend();"));
+  assert.ok(app[1].includes("pendingPad = -1;"));
+  assert.ok(app[1].includes("state = hasTakes() ? 'paused' : 'ready';"));
+});

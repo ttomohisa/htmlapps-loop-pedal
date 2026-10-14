@@ -1618,7 +1618,8 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#pauseButton').textContent = t(state === 'paused' ? 'play' : 'pause');
         $('#undoButton').disabled = !undoAvailable || busy || exporting || needsResume;
         $('#resetButton').disabled = !any || exporting;
-        $('#downloadButton').disabled = !any || busy || exporting || needsResume || !engine;
+        // Finished audio can still be saved when the mic becomes unavailable.
+        $('#downloadButton').disabled = !any || busy || exporting || !engine;
         $('#progressLabel').textContent = state === 'count-in' ? '4 / 4' : (totalFrames ? Math.round(totalFrames / audioRate * 10) / 10 + ' s' : '—');
         drawBeats();
       }
@@ -1671,6 +1672,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         if (Array.isArray(message.summary)) {
           for (let i = 0; i < 4; i++) tracks[i] = message.summary[i];
         }
+        if (needsResume) {
+          // Old queued/recording callbacks can arrive after the page or input
+          // stopped. They must not reopen an uncommitted take in the UI.
+          state = hasTakes() ? 'paused' : 'ready';
+          pendingPad = -1;
+        }
         if (message.kind === 'error') showError(t(message.reason === 'allocation' ? 'errorMemory' : 'errorGeneric'));
         if (message.kind === 'committed') {
           AppToast.show({message:t('recorded') + ' ' + readableTrack(message.index),tone:'success',duration:3200});
@@ -1691,6 +1698,13 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         if (!context || !engine || needsResume) return;
         needsResume = true;
         statusOverride = message || '';
+        // Discard only the UI representation of an uncommitted take now.
+        // The audio thread receives the matching interrupt when it can run.
+        if (isBusy()) {
+          pendingPad = -1;
+          state = hasTakes() ? 'paused' : 'ready';
+          recordPosition = 0;
+        }
         send({type:'interrupt'});
         if (context.state === 'running') context.suspend().catch(() => {});
         updateUI();
@@ -1955,13 +1969,16 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         });
       }
       async function downloadWav() {
-        if (!engine || !hasTakes() || isBusy() || exporting || needsResume) return;
+        if (!engine || !hasTakes() || isBusy() || exporting) return;
         exporting=true;statusOverride='';updateUI();
         $('#exportResult').textContent = t('exporting');
         try {
           const filename=normalizedFilename() + '.wav';
           const wasSuspended=context.state!=='running';
           if (wasSuspended) await context.resume();
+          // A paused/suspended processor processes the stop instruction first,
+          // then snapshots only fully committed tracks. No recording resumes.
+          if (needsResume) send({type:'interrupt'});
           const snapshot=await requestSnapshot();
           const wav=await encodeWav(snapshot,$('#exportDuration').value);
           const url=URL.createObjectURL(new Blob([wav],{type:'audio/wav'}));
@@ -1970,7 +1987,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           document.body.append(a);a.click();a.remove();
           setTimeout(()=>URL.revokeObjectURL(url),5000);
           $('#exportResult').textContent=t('exportReady') + ': ' + filename + ' · ' + Math.round((wav.byteLength-44)/2/snapshot.rate*10)/10 + ' s';
-          if (wasSuspended && !needsResume) await context.suspend();
+          if (wasSuspended) await context.suspend();
         } catch (err) {
           $('#exportResult').textContent=t('exportFail');
           AppToast.show({message:t('exportFail'),tone:'danger',duration:5000});
