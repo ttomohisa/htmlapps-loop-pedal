@@ -745,6 +745,7 @@ class LoopPedalProcessor extends AudioWorkletProcessor {
     this.bpm = 100;
     this.bars = 2;
     this.length = this.computeLength();
+    this.seamSamples = Math.max(2, Math.round(this.rate * 0.004));
     this.beat = Math.round(this.rate * 60 / this.bpm);
     this.phase = 0;
     this.countPosition = 0;
@@ -882,14 +883,20 @@ class LoopPedalProcessor extends AudioWorkletProcessor {
     const p = this.pending;
     if (!p) return;
     const previous = this.tracks[p.index];
+    const seamStart = Math.max(0, p.buffer.length - Math.min(this.seamSamples, Math.floor(p.buffer.length / 4)));
+    const boundaryDifference = p.buffer[0] - p.buffer[p.buffer.length - 1];
+    // Do not modify recorded PCM. Ease the very end of each take toward its
+    // first sample, so the first beat's transient remains exactly unchanged.
+    const seamDelta = Math.abs(boundaryDifference) < 0.02 ? 0 : boundaryDifference;
     this.tracks[p.index] = previous ? {
       pcm: p.buffer, gain: previous.gain, muted: false,
       shiftMs: previous.shiftMs, shift: previous.targetShift,
       targetShift: previous.targetShift, shiftFade: 0,
-      smooth: previous.gain
+      smooth: previous.gain, seamStart, seamDelta
     } : {
       pcm: p.buffer, gain: 1, muted: false, shiftMs: 0,
-      shift: 0, targetShift: 0, shiftFade: 0, smooth: 1
+      shift: 0, targetShift: 0, shiftFade: 0, smooth: 1,
+      seamStart, seamDelta
     };
     this.undo = {index: p.index, previous: previous};
     this.pending = null;
@@ -906,6 +913,16 @@ class LoopPedalProcessor extends AudioWorkletProcessor {
       }
     }
   }
+  // The correction is localized to the final ~4 ms and never changes PCM[0].
+  loopSample(track, index) {
+    const source = track.pcm[index];
+    if (!track.seamDelta || index < track.seamStart) return source;
+    const denom = track.pcm.length - track.seamStart - 1;
+    if (denom < 1) return source;
+    const x = (index - track.seamStart) / denom;
+    const smoothstep = x * x * (3 - 2 * x);
+    return source + track.seamDelta * smoothstep;
+  }
   // Signed shiftMs is perceived movement in time; negative means earlier.
   mix(frame, excludedIndex) {
     let sum = 0;
@@ -915,11 +932,11 @@ class LoopPedalProcessor extends AudioWorkletProcessor {
       const destination = t.muted ? 0 : t.gain;
       t.smooth += (destination - t.smooth) * 0.012;
       let i = (frame - t.shift + this.length) % this.length;
-      let sample = t.pcm[i];
+      let sample = this.loopSample(t, i);
       if (t.shiftFade > 0) {
         const j = (frame - t.targetShift + this.length) % this.length;
         const blend = 1 - t.shiftFade / 256;
-        sample = sample * (1 - blend) + t.pcm[j] * blend;
+        sample = sample * (1 - blend) + this.loopSample(t, j) * blend;
         t.shiftFade--;
         if (!t.shiftFade) t.shift = t.targetShift;
       }
@@ -1497,7 +1514,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         const micButton = $('#micButton');
         micButton.hidden = ready;
         micButton.disabled = initializing || exporting;
-        micButton.textContent = t(needsResume ? 'resumeAudio' : context && !activeMic ? 'retryMic' : 'startMic');
+        micButton.textContent = t(!activeMic && context ? 'retryMic' : needsResume ? 'resumeAudio' : 'startMic');
         $('#bpmInput').disabled = busy || any || exporting;
         $('#barsSelect').disabled = busy || any || exporting;
         $('#modeSelect').disabled = busy || exporting;
@@ -1612,11 +1629,17 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         if (context.state === 'running') context.suspend().catch(() => {});
         updateUI();
       }
-      function microphoneEnded() {
-        if (!microphone) return;
+      function microphoneEnded(stream) {
+        // An 'ended' callback from a *previous* device must never stop a
+        // replacement stream, even when the two events race on mobile.
+        if (microphone !== stream) return;
         stopStream();
         interruption(t('statusNoMic'));
         updateUI();
+      }
+      function microphoneMuted(stream) {
+        if (microphone !== stream) return;
+        interruption('');
       }
       function attachStream(stream) {
         stopStream();
@@ -1624,7 +1647,10 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         inputSource = context.createMediaStreamSource(stream);
         inputSource.connect(engine);
         activeMic = true;
-        stream.getAudioTracks().forEach(track => track.addEventListener('ended', microphoneEnded, {once:true}));
+        stream.getAudioTracks().forEach(track => {
+          track.addEventListener('ended', () => microphoneEnded(stream), {once:true});
+          track.addEventListener('mute', () => microphoneMuted(stream));
+        });
       }
       async function prepareMicrophone() {
         if (initializing || exporting) return;
@@ -1811,7 +1837,15 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         const shift = Math.round(take.shiftMs * rate / 1000);
         let index = (frame % loopFrames - shift) % loopFrames;
         if (index < 0) index += loopFrames;
-        return take.pcm[index] * take.gain;
+        let sample = take.pcm[index];
+        if (take.seamDelta && index >= take.seamStart) {
+          const denominator = loopFrames - take.seamStart - 1;
+          if (denominator >= 1) {
+            const x = (index - take.seamStart) / denominator;
+            sample += take.seamDelta * x * x * (3 - 2 * x);
+          }
+        }
+        return sample * take.gain;
       }
       async function encodeWav(snapshot,duration) {
         const length = snapshot.length;
@@ -1821,7 +1855,13 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         const buffer = new ArrayBuffer(44+frames*2);
         const view = new DataView(buffer);
         wavHeader(view,frames,rate);
-        const audible = snapshot.tracks.filter(track=>track && !track.muted && track.gain>0);
+        const seamSamples = Math.max(2,Math.round(rate * 0.004));
+        const audible = snapshot.tracks.filter(track=>track && !track.muted && track.gain>0)
+          .map(track => {
+            const seamStart = Math.max(0, track.pcm.length - Math.min(seamSamples, Math.floor(track.pcm.length / 4)));
+            const boundaryDifference = track.pcm[0] - track.pcm[track.pcm.length - 1];
+            return {...track, seamStart, seamDelta: Math.abs(boundaryDifference) < 0.02 ? 0 : boundaryDifference};
+          });
         const fadeFrames = duration === 'loop' ? 0 : Math.min(frames,Math.round(rate*0.25));
         for (let start=0;start<frames;start+=8192) {
           const end=Math.min(frames,start+8192);
