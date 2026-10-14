@@ -184,3 +184,114 @@ test('snapshot keeps original audio and timing settings unchanged', () => {
   assert.equal(snapshot.tracks[0].gain,0.3);
   assert.equal(snapshot.tracks[0].pcm.length,processor.length);
 });
+
+
+test('mobile and bilingual UX fixes retain help modal scrolling but lock its background', () => {
+  assert.match(html, /"localBadge": "完全ローカル処理"/);
+  assert.match(html, /"brandMeta": "録音・ループ再生・音を重ねる"/);
+  assert.match(html, /"brandMeta": "Record · Loop · Layer"/);
+  assert.match(html, /language === 'ja' \? 'EN' : 'JA'/);
+  assert.match(html, /@media \(max-width: 767px\)[\s\S]*?footer \{ display: none; \}/);
+  assert.match(html, /function lockHelpBackground\(\)/);
+  assert.match(html, /body\.style\.position = 'fixed'/);
+  assert.match(html, /root\.style\.overflow = 'hidden'/);
+  assert.match(html, /helpDialog\.addEventListener\('close',unlockHelpBackground\)/);
+  assert.match(html, /window\.scrollTo\(0, lock\.y\)/);
+  assert.match(html, /\.dialog-body \{[\s\S]*?overflow: auto;/);
+});
+
+function offlineSample() {
+  const source = app[1].match(/function playbackSample\(take, frame, loopFrames, rate\) \{[\s\S]*?\n      \}/);
+  assert.ok(source, 'offline loop playback function missing');
+  return vm.runInNewContext(source[0] + '\nplaybackSample;');
+}
+
+test('seam treatment preserves the downbeat and matches offline export', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4);
+  processFrames(128,0.9);
+  processFrames(N-256,0);
+  processFrames(128,-0.9);
+  const track=processor.tracks[0];
+  assert.ok(track && track.seamDelta>1.7);
+  assert.equal(track.pcm[0],Math.fround(0.9));
+  assert.equal(track.pcm[N-1],Math.fround(-0.9));
+  assert.ok(Math.abs(processor.loopSample(track,0)-track.pcm[0])<1e-7);
+  assert.ok(Math.abs(processor.loopSample(track,N-1)-track.pcm[0])<1e-6);
+  // First sample is untouched, the very end approaches it smoothly.
+  assert.equal(processor.loopSample(track,track.seamStart),track.pcm[track.seamStart]);
+  const offline=offlineSample();
+  const exported={
+    pcm:track.pcm,gain:track.gain,shiftMs:0,
+    seamStart:track.seamStart,seamDelta:track.seamDelta
+  };
+  for(const i of [0,1,N-8,N-4,N-3,N-2,N-1]) {
+    const realtime=processor.loopSample(track,i);
+    const sampled=offline(exported,i,N,1000);
+    assert.ok(Math.abs(realtime-sampled)<1e-6, String(i));
+  }
+});
+
+test('per-track positive and negative timing compensation agrees with WAV render', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+N,0.4);
+  const offline=offlineSample();
+  for (const shift of [-200,-25,0,50,200]) {
+    send({type:'adjust',index:0,shiftMs:shift});
+    const take=processor.tracks[0];
+    // Crossfade the transient shift update before comparing steady-state playback.
+    processor.process([[new Float32Array(256)]],[[new Float32Array(256)]]);
+    const data={pcm:take.pcm,gain:take.gain,shiftMs:take.shiftMs,
+      seamDelta:take.seamDelta,seamStart:take.seamStart};
+    for (const f of [0,1,4,50,N-1]) {
+      const real=processor.loopSample(take,(f-take.targetShift+N)%N)*take.gain;
+      const saved=offline(data,f,N,1000);
+      assert.ok(Math.abs(real-saved)<1e-6, 'shift '+shift+', frame '+f);
+    }
+    assert.equal(take.shiftMs,shift);
+  }
+});
+
+test('interruption discards partial replacement take but never the previous take', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+N,0.2);
+  const saved=processor.tracks[0].pcm;
+  send({type:'queue',index:0,mode:'headphones'});
+  processFrames(N+64,0.8);
+  assert.equal(processor.state,'recording');
+  send({type:'interrupt'});
+  assert.equal(processor.pending,null);
+  assert.equal(processor.state,'paused');
+  send({type:'resume'});
+  processFrames(N*3,0.7);
+  assert.equal(processor.tracks[0].pcm,saved);
+});
+
+test('loop phase remains exact after one thousand consecutive turns', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:127,bars:1});
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+processor.length,0.35);
+  assert.equal(processor.phase,0);
+  let remaining=processor.length*1000;
+  const silent=new Float32Array(128);
+  while(remaining>0) {
+    const n=Math.min(128,remaining);
+    const input=n===128?silent:new Float32Array(n);
+    const output=new Float32Array(n);
+    processor.process([[input]],[[output]]);
+    remaining-=n;
+  }
+  assert.equal(processor.phase,0);
+  assert.equal(processor.state,'playing');
+  assert.equal(processor.tracks[0].pcm.length,processor.length);
+});
