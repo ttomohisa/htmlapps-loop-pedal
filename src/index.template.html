@@ -1170,6 +1170,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "errorDenied": "マイクの使用を許可できませんでした。アドレスバーや端末の設定で許可を確認し、再度お試しください。",
           "errorNoDevice": "マイクが見つかりません。接続や端末の設定を確認してください。",
           "errorWorklet": "音声処理を初期化できませんでした。ブラウザとセキュリティ設定を確認してください。",
+          "errorProcessorStopped": "音声処理が停止しました。録音を保持できない場合があります。再読み込みが必要です。",
+          "reloadApp": "再読み込み",
+          "reloadTitle": "アプリを再読み込み",
+          "reloadWarning": "音声処理を復旧できません。再読み込みすると、このページの未保存の録音は消えます。再読み込みしますか？",
+          "statusMicMuted": "マイクが一時停止しました。端末のマイク設定を確認してください。",
+          "errorInputStillMuted": "マイクがまだ停止しています。端末のマイク使用状態を確認してから再開してください。",
           "errorMemory": "録音用のメモリを確保できませんでした。別のタブを閉じてお試しください。",
           "errorGeneric": "エラーが発生しました。既存の録音は保持されています。",
           "padName": "音",
@@ -1300,6 +1306,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "errorDenied": "Microphone permission was denied. Check browser or system permissions and try again.",
           "errorNoDevice": "No microphone was found. Check the device connection and try again.",
           "errorWorklet": "Audio processing could not start. Check the browser and its security restrictions.",
+          "errorProcessorStopped": "Audio processing stopped unexpectedly. Recorded audio may be unavailable. Reload is required.",
+          "reloadApp": "Reload app",
+          "reloadTitle": "Reload Loop Pedal",
+          "reloadWarning": "The audio engine cannot be recovered. Reloading removes unsaved recordings in this tab. Reload now?",
+          "statusMicMuted": "Your microphone was temporarily muted. Check your device's microphone settings.",
+          "errorInputStillMuted": "The microphone is still muted or disconnected. Check the device before resuming.",
           "errorMemory": "Could not allocate memory for recording. Close other tabs and try again.",
           "errorGeneric": "An error occurred. Finished takes are still available.",
           "padName": "Track",
@@ -1518,6 +1530,8 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       let exporting = false;
       let activeMic = false;
       let needsResume = false;
+      let processorFailed = false;
+      let queueGesturePending = false;
       let phase = 0;
       let totalFrames = 0;
       let audioRate = 0;
@@ -1573,6 +1587,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         AppToast.show({message, duration:6000, tone:'danger'});
       }
       function statusText() {
+        if (processorFailed) return t('errorProcessorStopped');
         if (statusOverride) return statusOverride;
         if (initializing) return t('statusLoading');
         if (needsResume) return t('statusInterrupted');
@@ -1587,14 +1602,14 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       function updateUI() {
         const busy = isBusy();
         const any = hasTakes();
-        const ready = !!engine && activeMic && !needsResume && !initializing && !exporting;
+        const ready = !!engine && activeMic && !needsResume && !processorFailed && !initializing && !exporting;
         const status = $('#engineStatus');
         status.textContent = statusText();
-        status.classList.toggle('error', Boolean(statusOverride));
+        status.classList.toggle('error', Boolean(statusOverride) || processorFailed);
         const micButton = $('#micButton');
         micButton.hidden = ready;
         micButton.disabled = initializing || exporting;
-        micButton.textContent = t(!activeMic && context ? 'retryMic' : needsResume ? 'resumeAudio' : 'startMic');
+        micButton.textContent = t(processorFailed ? 'reloadApp' : !activeMic && context ? 'retryMic' : needsResume ? 'resumeAudio' : 'startMic');
         $('#bpmInput').disabled = busy || any || exporting;
         $('#barsSelect').disabled = busy || any || exporting;
         $('#modeSelect').disabled = busy || exporting;
@@ -1641,10 +1656,10 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#abortButton').disabled = !busy || exporting;
         $('#pauseButton').disabled = !any || !ready;
         $('#pauseButton').textContent = t(state === 'paused' ? 'play' : 'pause');
-        $('#undoButton').disabled = !undoAvailable || busy || exporting || needsResume;
-        $('#resetButton').disabled = !any || busy || exporting;
+        $('#undoButton').disabled = !undoAvailable || busy || exporting || needsResume || processorFailed;
+        $('#resetButton').disabled = !any || busy || exporting || processorFailed;
         // Finished audio can still be saved when the mic becomes unavailable.
-        $('#downloadButton').disabled = !any || busy || exporting || !engine;
+        $('#downloadButton').disabled = !any || busy || exporting || !engine || processorFailed;
         $('#progressLabel').textContent = state === 'count-in' ? '4 / 4' : (totalFrames ? Math.round(totalFrames / audioRate * 10) / 10 + ' s' : '—');
         drawBeats();
       }
@@ -1704,7 +1719,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           pendingPad = -1;
         }
         if (message.kind === 'error') showError(t(message.reason === 'allocation' ? 'errorMemory' : 'errorGeneric'));
-        if (message.kind === 'committed') {
+        if (message.kind === 'committed' && !needsResume && !processorFailed) {
           AppToast.show({message:t('recorded') + ' ' + readableTrack(message.index),tone:'success',duration:3200});
           $('#exportResult').textContent = '';
         }
@@ -1744,7 +1759,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       function microphoneMuted(stream) {
         if (microphone !== stream) return;
-        interruption('');
+        interruption(t('statusMicMuted'));
       }
       function attachStream(stream) {
         stopStream();
@@ -1759,7 +1774,23 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       async function prepareMicrophone() {
         if (initializing || exporting) return;
+        if (processorFailed) {
+          const approved = await AppConfirm.ask({
+            title: t('reloadTitle'),
+            message: t('reloadWarning'),
+            confirmLabel: t('reloadApp'),
+            cancelLabel: t('cancel'),
+            tone: 'danger'
+          });
+          if (approved) window.location.reload();
+          return;
+        }
         if (needsResume && activeMic && engine) {
+          const track = microphone?.getAudioTracks()?.[0];
+          if (!track || track.readyState !== 'live' || track.muted) {
+            showError(t('errorInputStillMuted'));
+            return;
+          }
           try {
             // The pending take must be discarded even if the browser paused before
             // processing the previous interruption message.
@@ -1797,7 +1828,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
               numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[1]
             });
             engine.port.onmessage = event => onAudioMessage(event.data || {});
-            engine.onprocessorerror = () => interruption(t('errorWorklet'));
+            engine.onprocessorerror = () => {
+              processorFailed = true;
+              interruption(t('errorProcessorStopped'));
+              statusOverride = t('errorProcessorStopped');
+              updateUI();
+            };
             engine.connect(context.destination);
             await initialResume;
             send({type:'configure',bpm:Number($('#bpmInput').value),bars:Number($('#barsSelect').value)});
@@ -1807,9 +1843,9 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
             video:false
           });
           attachStream(stream);
-          needsResume = false;
           await context.resume();
           send({type:'resume'});
+          needsResume = false;
           statusOverride = '';
         } catch (error) {
           // A failed first AudioWorklet load must be retryable. Keeping a context
@@ -1822,6 +1858,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
             send({type:'interrupt'});
           }
           if (microphone && !activeMic) stopStream();
+          if (engine && activeMic) needsResume = true;
           const name = error?.name || '';
           if (name === 'NotAllowedError' || name === 'PermissionDeniedError') statusOverride = t('errorDenied');
           else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') statusOverride = t('errorNoDevice');
@@ -1843,7 +1880,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         updateUI();
       }
       async function queuePad(index, forceReplace = false) {
-        if (!engine || !activeMic || needsResume || initializing || exporting) return;
+        if (!engine || !activeMic || needsResume || processorFailed || initializing || exporting || queueGesturePending) return;
         if (isBusy()) {
           if (pendingPad === index && state === 'queued') send({type:'abort'});
           return;
@@ -1852,25 +1889,36 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           send({type:'adjust',index,muted:!tracks[index].muted});
           return;
         }
+        const requestGeneration = generation;
         if (context.state !== 'running') {
-          try { await context.resume(); send({type:'resume'}); }
+          queueGesturePending = true;
+          try { await context.resume(); }
           catch { showError(t('errorWorklet')); return; }
+          finally { queueGesturePending = false; }
         }
+        // A microphone interruption, new session, or second user action during
+        // the awaited resume must never turn into a late recording request.
+        if (requestGeneration !== generation || needsResume || processorFailed ||
+            !activeMic || initializing || exporting || isBusy() || !engine) return;
+        send({type:'resume'});
         send({type:'queue',index,mode:mode()});
-        // Ignore extra taps until the audio thread acknowledges the queue.
         pendingPad = index;
         state = hasTakes() ? 'queued' : 'count-in';
         statusOverride = '';
         updateUI();
       }
       async function togglePause() {
-        if (!engine || !activeMic || needsResume || exporting || !hasTakes()) return;
+        if (!engine || !activeMic || needsResume || processorFailed || exporting || !hasTakes()) return;
         if (state === 'paused') {
-          try { await context.resume(); send({type:'resume'}); }
-          catch { showError(t('errorWorklet')); }
+          const requestGeneration = generation;
+          try {
+            await context.resume();
+            if (requestGeneration !== generation || needsResume || processorFailed || !activeMic) return;
+            send({type:'resume'});
+          } catch { showError(t('errorWorklet')); }
         } else send({type:'pause'});
       }
-      function confirmCanOperate() { return !exporting && !!engine && !isBusy(); }
+      function confirmCanOperate() { return !exporting && !processorFailed && !!engine && !isBusy(); }
       async function resetAll() {
         if (!hasTakes() || exporting || isBusy()) return;
         const allowed = await AppConfirm.ask({
@@ -1995,7 +2043,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         });
       }
       async function downloadWav() {
-        if (!engine || !hasTakes() || isBusy() || exporting) return;
+        if (!engine || !hasTakes() || isBusy() || exporting || processorFailed) return;
         exporting=true;statusOverride='';updateUI();
         $('#exportResult').textContent = t('exporting');
         try {
