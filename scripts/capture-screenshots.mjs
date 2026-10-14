@@ -112,6 +112,15 @@ try {
   await cdp.until("document.querySelector('#pad0').classList.contains('has-take')");
   await cdp.run("document.querySelector('#pad1').click()");
   await cdp.until("document.querySelector('#pad1').classList.contains('has-take')");
+  // Browser-level WAV smoke: a real AudioWorklet snapshot must yield a WAV
+  // that is available for local playback and a user-tapped re-download.
+  await cdp.run("document.querySelector('#downloadButton').click()");
+  await cdp.until("document.querySelector('#exportPreviewBlock').hidden===false",15000);
+  if(!await cdp.run("document.querySelector('#exportPreviewAudio').src.startsWith('blob:')"))
+    throw Error('WAV preview was not created');
+  if(!await cdp.run("document.querySelector('#exportDownloadAgain').href.startsWith('blob:')"))
+    throw Error('Explicit WAV download fallback is missing');
+  console.log('Browser WAV export and local preview: PASS');
   await setLocale(cdp,'ja');
   await screenshot(cdp,'screenshot.png',1360,900,false);
   await setLocale(cdp,'en');
@@ -119,6 +128,19 @@ try {
   await setLocale(cdp,'ja');
   await screenshot(cdp,'screenshot-mobile.png',390,844,true);
   console.log('Captured actual UI with two genuine synthetic-mic recordings.');
+  // file:// direct-open compatibility is browser-specific. Record the
+  // observation, but do not turn a screenshot build into a release waiver.
+  try{
+    const fileUrl='file:///'+path.resolve('dist/index.html').replace(/\\/g,'/');
+    const result=await cdp.send('Page.navigate',{url:fileUrl});
+    if(result.errorText)throw Error(result.errorText);
+    await cdp.until("document.readyState==='complete' && !!document.querySelector('#micButton')",7000);
+    await cdp.run("document.querySelector('#micButton').click()");
+    await cdp.until("document.querySelector('#pad0').disabled===false",10000);
+    console.log('Direct file:// microphone initialization in Edge: PASS (fake input)');
+  }catch(error){
+    console.warn('Direct file:// microphone initialization: NOT VERIFIED/BLOCKED: '+String(error));
+  }
 } finally {
   if(ws)try{ws.close()}catch{}
   if(browser)try{browser.kill()}catch{}

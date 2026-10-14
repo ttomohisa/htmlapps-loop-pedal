@@ -385,3 +385,23 @@ Reviewer:
 - 書き出したWAVはブラウザの試聴UIと再ダウンロードリンクを持つ。自動ダウンロードがOSで完了したかはブラウザでは確認できないため、端末での確認が必要。
 - **未実施/P0:** Windows Chrome/Edge、Android Chrome、iPhone Safariでの実ファイル保存と外部プレイヤー再生（LP-EXPORT-09/12等）、長時間音声のメモリ限界、イヤホンとスマホスピーカーにおける聴感。
 - この段階の自動試験が成功しても、v0.5.0とv1.0.0の実機ゲート全体がPASSになったわけではない。CI結果は [Draft PR #1](https://github.com/ttomohisa/htmlapps-loop-pedal/pull/1) に記録する。
+
+
+## v1.0.0-rc.1 — Release candidate audit (2026-10-14)
+
+### 自動検証で確認できた範囲
+
+- `node --test tests/loop-pedal.test.cjs tests/release-audit.test.cjs` を既存CIに追加。ブラウザ標準音声処理、音声フレーム同期、WAV PCMヘッダー・各時間のサンプル数、Gain/Mute/Offsetとフェード、出力の中止、翻訳キー、CSP、外部ネットワーク資源、ユーザー提供SVGの一致を検査する。
+- Windows版Edgeをヘッドレス起動し、テスト専用の仮想マイクから**実際に**2つのパッドへ録音したアプリ画面を撮影する。`assets/screenshot.png` は日本語、`assets/screenshot-en.png` は英語、`assets/screenshot-mobile.png` は390px表示。
+- ブラウザテストには自動生成したマイク入力を使う。実際のスマホ・有線イヤホンや外部プレイヤーの結果とは**別物**である。スクリーンショットでは仮想入力の録音状態が使用され、音質の人手評価は実施しない。
+- テストの実行証跡は [Draft PR #1](https://github.com/ttomohisa/htmlapps-loop-pedal/pull/1) のActionsに残す。ワークフロー結果を確認してから「成功」と記録する。
+
+### 正式v1.0.0へ進めない項目（手動・実機）
+
+- `LP-AUDIO-06 / 09 / 11 / 12 / 16`: 有線イヤホン/スピーカーの重ね録り、端末遅延の数値計測、ループ継ぎ目の聴感・信号検証。
+- `LP-RECOVERY-01 / 02 / 03 / 08`: 画面ロック、着信、音声デバイス変更時のセッション保持と明示的再開。
+- `LP-UX-01 / 02 / 03 / 04 / 05 / 07 / 10`: iPhone/Android実機での見切れ、タップ領域、モーダルスクロール、日英切替、アクセシビリティ。
+- `LP-EXPORT-09 / 12`: WAVを実際に端末へ保存し、ブラウザ外の音声プレイヤーで再生すること。
+- `LP-REL-05 / 06 / 07 / 09 / 13`: 実機のHTTPS/単一HTML直開き、外部通信なしの実測監査、スマホ実機の確認。
+
+**承認状態:** Release candidateのみ。正式リリース承認前のP0必須項目が残っている。

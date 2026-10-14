@@ -2,7 +2,11 @@
 
 Record sounds on four pads, loop each take to the same musical length, layer the tracks, and export a WAV file. Use everyday percussion, voice, guitar, or any sound picked up by your microphone.
 
-> **Development preview v0.5.0** — WAV output now has cancelable progress, playback preview, a persistent download fallback, and stronger filename/format verification. Device latency measurements, iPhone/Android audio routing, actual downloads in external players, and release screenshots still need physical-device checks.
+![Loop Pedal English desktop — two tracks recorded with a test microphone](assets/screenshot-en.png)
+
+[Japanese desktop screenshot](assets/screenshot.png) · [Mobile screenshot (390px)](assets/screenshot-mobile.png)
+
+> **Release candidate v1.0.0-rc.1** — Core recording and WAV export passed deterministic Node tests, and a headless Windows Edge session recorded two test-microphone tracks to capture real UI screenshots. iPhone/Android microphone paths, real headphone latency, external-player downloads, and acoustic quality remain unverified. This is **not a production release**.
 
 [日本語 README](README.ja.md) · [Product specification](APP_SPEC.md) · [Acceptance matrix](ACCEPTANCE_MATRIX.md)
 
@@ -20,6 +24,7 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 - Background scrolling is locked for Help and track/confirmation dialogs, including smartphone safe-area handling.
 - On audio interruption, uncommitted takes are discarded and finished tracks are preserved. A fully failed audio engine requires confirmed reload; unsaved takes cannot be recovered.
 - The user-supplied `assets/favicon.svg` is embedded unchanged as both the favicon and the header icon. Audio is kept only in browser memory.
+- Real browser screenshots are generated with Windows Edge and a synthetic microphone, not simulated DOM states. The screenshot capture can be repeated via `scripts/capture-screenshots.mjs`.
 
 ## How to use
 
@@ -56,7 +61,7 @@ The repository follows [htmlapps-template](https://github.com/ttomohisa/htmlapps
 - `loop-pedal.html` — root copy of the readable build
 - `dist/build-size-report.json` — size report
 
-Run `node --test tests/loop-pedal.test.cjs` for deterministic clock/recording tests. CI also runs the template's standard build checks.
+Run `node --test tests/loop-pedal.test.cjs tests/release-audit.test.cjs` for deterministic clock/recording, WAV and release-policy tests. CI builds both standalone variants and validates icon and screenshot assets. The release screenshots are captured from the real app via `node scripts/capture-screenshots.mjs` on Windows Edge with a test-only microphone.
 
 ## License
 

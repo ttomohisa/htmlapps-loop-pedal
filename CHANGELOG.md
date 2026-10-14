@@ -2,7 +2,15 @@
 
 ## Unreleased
 
-- Pending physical-device timing and microphone interruption verification, Japanese/English screenshots, and release gating.
+- Pending physical-device timing, interruption and audio-route verification, real-device download checks, and final stable v1.0.0 approval.
+
+## 1.0.0-rc.1 - Release verification candidate - 2026-10-14
+
+- Captured desktop Japanese, desktop English, and 390px smartphone screenshots from the actual built Loop Pedal UI in Windows Edge, using genuine AudioWorklet recordings from an automated synthetic microphone.
+- Added a Chromium DevTools Protocol browser capture script without runtime or npm dependencies. It also checks WAV preview/re-download from the browser's actual recording flow and reports local-file compatibility observations.
+- Added release audit tests for Japanese/English UI strings, CSP/no-runtime-network constraints, exact supplied icon bytes, screenshot PNG dimensions and version/document alignment.
+- Retained all v0.5.0 recording, offset, headphone/phone capture, Undo, WAV export, preview and cancellation features.
+- **Release blockers:** Real iOS/Android microphone and audio route tests, actual wired-headphone latency measurement, audible seam/noise tests, native-file WAV playback/download, and direct file:// support confirmation before stable release.
 
 ## 0.5.0 - WAV export and file workflow development preview - 2026-10-14
 

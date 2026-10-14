@@ -37,7 +37,7 @@ jobs:
 
       - name: Test Loop Pedal audio engine
         shell: pwsh
-        run: node --test tests/loop-pedal.test.cjs
+        run: node --test tests/loop-pedal.test.cjs tests/release-audit.test.cjs
 
       - name: Validate PowerShell syntax and encoding
         shell: powershell

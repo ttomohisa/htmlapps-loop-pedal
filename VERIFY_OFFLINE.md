@@ -4,6 +4,8 @@ This is a **manual test plan**, not a statement that every environment has passe
 
 ## Local single-HTML builds
 
+**リリース候補の自動ブラウザ確認:** Windows EdgeのCDP経由で `node scripts/capture-screenshots.mjs` を実行する。ブラウザ内で仮想マイクを許可し、1小節200BPMで2トラックを録音・WAV出力し、その画面から日英/390pxスクリーンショットを生成する。これにより実ブラウザの音声処理/レイアウトの一部を検証するが、スマホの物理マイクやイヤホン計測は代替できない。
+
 1. Run `build-standalone.bat` on Windows. Verify that the normal
    `dist/index.html`, the self-extracting `dist/index.self-extract.html`,
    and the repository-root `loop-pedal.html` are generated.

@@ -2,7 +2,11 @@
 
 4つのパッドに音を録音し、設定した小節数で自動的に繰り返して重ねられるブラウザツールです。机を叩く音、手拍子、声、ギターなどを組み合わせ、WAVとして保存できます。
 
-> **開発プレビュー v0.5.0** — WAV書き出しの進捗・中止・試聴・再ダウンロード、ファイル名の安全処理、音声形式の自動検証を強化しました。iPhone/Androidの実機録音・保存、端末遅延計測、正式公開用スクリーンショットは未完了です。正式リリースではありません。
+![Loop Pedal 日本語版 — テスト用マイクで2トラックを録音した実画面](assets/screenshot.png)
+
+[英語版の画面](assets/screenshot-en.png) · [スマートフォン幅の画面](assets/screenshot-mobile.png)
+
+> **リリース候補 v1.0.0-rc.1** — 主要機能の音声エンジン・WAV出力は自動テストで検証し、Windows版Edgeのヘッドレス環境でテスト用マイクから2トラックを録音した画面を撮影しました。iPhone/Android実機、イヤホン遅延の実測、外部プレイヤーでのファイル再生、音質の聴感確認は未完了のため、**正式リリースではありません**。
 
 [English README](README.md) · [製品仕様](APP_SPEC.md) · [受け入れ基準](ACCEPTANCE_MATRIX.md)
 
@@ -20,6 +24,7 @@
 - ヘルプ、トラック設定、確認ダイアログの表示中は背景のスクロールを固定します。
 - 音声中断時は未完成の録音だけを破棄し、確定済みテイクを守ります。音声処理自体が壊れた場合は、未保存録音の消失を警告して再読み込みを選べるようにしています。
 - 指定の `assets/favicon.svg` を内容を変更せず、faviconとヘッダーの両方で使用します。録音とWAV試聴用の音声はメモリ内だけに保持します。完成済みWAVは一時的なBlob URLとして扱い、音源や出力時間の変更時に破棄します。
+- スクリーンショットはWindows版Edgeの実画面をテスト専用マイクで録音して撮影しています。操作画面の見た目を画像生成やDOM模擬で作ったものではありません。
 
 ## 使い方
 
@@ -59,7 +64,7 @@ Windowsでは `build-standalone.bat`、または PowerShellで `./scripts/check-
 - `loop-pedal.html` — リポジトリ直下の通常版コピー（ビルドで生成）
 - `dist/build-size-report.json` — ビルドサイズ情報
 
-音声クロックの自動テストには Node.js を用い、`node --test tests/loop-pedal.test.cjs` を実行します。GitHub Actionsでも同じテストとテンプレートの検証を実行します。
+Node.jsで `node --test tests/loop-pedal.test.cjs tests/release-audit.test.cjs` を実行して音声・書き出し・リリース条件を確認します。GitHub Actionsでは同じ自動テスト、テンプレートの単一HTML検証を実施します。日英・スマホのスクリーンショットは `node scripts/capture-screenshots.mjs`（Windows Edge、テスト用マイク）で更新できます。
 
 ## ライセンス
 
