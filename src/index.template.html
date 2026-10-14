@@ -1177,6 +1177,8 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "padEmptySub": "タップして録音",
           "padPlaying": "再生中",
           "padPlayingSub": "タップでミュート",
+          "padPaused": "一時停止中",
+          "padPausedSub": "タップでミュート",
           "padMuted": "ミュート",
           "padMutedSub": "タップで再生",
           "padQueued": "録音待機",
@@ -1305,6 +1307,8 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "padEmptySub": "Tap to record",
           "padPlaying": "Playing",
           "padPlayingSub": "Tap to mute",
+          "padPaused": "Paused",
+          "padPausedSub": "Tap to mute",
           "padMuted": "Muted",
           "padMutedSub": "Tap to unmute",
           "padQueued": "Queued",
@@ -1429,6 +1433,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           return new Promise(resolve => {
             resolver = resolve;
             dialog.showModal();
+            lockHelpBackground();
             requestAnimationFrame(() => cancelButton.focus({ preventScroll: true }));
           });
         }
@@ -1436,6 +1441,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         closeButton.addEventListener('click', () => finish(false));
         cancelButton.addEventListener('click', () => finish(false));
         okButton.addEventListener('click', () => finish(true));
+        dialog.addEventListener('close', unlockHelpBackground);
         dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
         dialog.addEventListener('click', event => {
           const rect = dialog.getBoundingClientRect();
@@ -1495,6 +1501,15 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
 
       // APP:SCRIPT:BEGIN — Loop Pedal. Sound data stays in memory only.
       const tracks = [null, null, null, null];
+      // All pad artwork is inline SVG, with no user-controlled markup or assets.
+      const PAD_SYMBOLS = Object.freeze({
+        record: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>',
+        playing: '<path d="m9 6 9 6-9 6z" fill="currentColor" stroke="none"/>',
+        muted: '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="m15 9 6 6m0-6-6 6"/>',
+        paused: '<rect x="6.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="13.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
+        queued: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        recording: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>'
+      });
       let engine = null;
       let microphone = null;
       let inputSource = null;
@@ -1596,13 +1611,23 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
             statusKey = state === 'count-in' ? 'padCount' : state === 'queued' ? 'padQueued' : track ? 'padRerecord' : 'padRecording';
             subKey = state === 'queued' ? 'padQueuedSub' : state === 'count-in' ? 'padCountSub' : track ? 'padRerecordSub' : 'padRecordingSub';
           } else if (track) {
-            statusKey = track.muted ? 'padMuted' : 'padPlaying';
-            subKey = track.muted ? 'padMutedSub' : 'padPlayingSub';
+            statusKey = track.muted ? 'padMuted' : state === 'paused' ? 'padPaused' : 'padPlaying';
+            subKey = track.muted ? 'padMutedSub' : state === 'paused' ? 'padPausedSub' : 'padPlayingSub';
           }
+          const symbol = mine
+            ? state === 'queued' || state === 'count-in' ? 'queued' : 'recording'
+            : track ? track.muted ? 'muted' : state === 'paused' ? 'paused' : 'playing' : 'record';
+          const symbolElement = pad.querySelector('.lp-pad-mark');
+          if (symbolElement.dataset.symbol !== symbol) {
+            symbolElement.innerHTML = PAD_SYMBOLS[symbol];
+            symbolElement.dataset.symbol = symbol;
+          }
+          if (track) pad.setAttribute('aria-pressed', String(!track.muted));
+          else pad.removeAttribute('aria-pressed');
           $('#padName' + i).textContent = readableTrack(i);
           padStatus.textContent = t(statusKey);
           padSub.textContent = t(subKey);
-          pad.setAttribute('aria-label', readableTrack(i) + ': ' + t(statusKey));
+          pad.setAttribute('aria-label', readableTrack(i) + ': ' + t(statusKey) + '. ' + t(subKey));
           pad.classList.toggle('has-take', Boolean(track));
           pad.classList.toggle('is-muted', Boolean(track?.muted));
           pad.classList.toggle('is-queued', mine && state === 'queued');
@@ -1617,7 +1642,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#pauseButton').disabled = !any || !ready;
         $('#pauseButton').textContent = t(state === 'paused' ? 'play' : 'pause');
         $('#undoButton').disabled = !undoAvailable || busy || exporting || needsResume;
-        $('#resetButton').disabled = !any || exporting;
+        $('#resetButton').disabled = !any || busy || exporting;
         // Finished audio can still be saved when the mic becomes unavailable.
         $('#downloadButton').disabled = !any || busy || exporting || !engine;
         $('#progressLabel').textContent = state === 'count-in' ? '4 / 4' : (totalFrames ? Math.round(totalFrames / audioRate * 10) / 10 + ' s' : '—');
@@ -1847,12 +1872,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       function confirmCanOperate() { return !exporting && !!engine && !isBusy(); }
       async function resetAll() {
-        if (!hasTakes() || exporting) return;
+        if (!hasTakes() || exporting || isBusy()) return;
         const allowed = await AppConfirm.ask({
           title:t('resetTitle'), message:t('resetMessage'),tone:'danger',
           confirmLabel:t('resetAction'),cancelLabel:t('cancel')
         });
-        if (!allowed || exporting) return;
+        if (!allowed || exporting || isBusy()) return;
         generation++;
         exportRequests.forEach(request => {clearTimeout(request.timeout);request.reject(new Error('reset'));});
         exportRequests.clear();
@@ -1865,7 +1890,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         updateUI();
       }
       function openTrackDialog(index) {
-        if (!tracks[index] || isBusy() || exporting) return;
+        if (!tracks[index] || isBusy() || exporting || $('#trackDialog').open) return;
         selectedPad = index;
         $('#trackDialogTitle').textContent = readableTrack(index) + ' ' + t('trackSettings');
         $('#gainInput').value = String(Math.round(tracks[index].gain * 100));
@@ -1873,6 +1898,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#gainValue').textContent = $('#gainInput').value + '%';
         $('#shiftValue').textContent = $('#shiftInput').value + ' ms';
         $('#trackDialog').showModal();
+        lockHelpBackground();
       }
       function closeTrackDialog() { $('#trackDialog').close(); }
       function adjustSelected(name, value) {
@@ -2021,7 +2047,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       function unlockHelpBackground() {
         const lock = helpScrollLock;
-        if (!lock) return;
+        if (!lock || document.querySelector('dialog[open]')) return;
         helpScrollLock = null;
         const root = document.documentElement;
         const body = document.body;
@@ -2060,6 +2086,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       $('#outputFilename').addEventListener('blur',normalizedFilename);
       $('#closeTrackDialog').addEventListener('click',closeTrackDialog);
       const trackDialog=$('#trackDialog');
+      trackDialog.addEventListener('close',unlockHelpBackground);
       trackDialog.addEventListener('click',event=>{
         const rect=trackDialog.getBoundingClientRect();
         if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeTrackDialog();
