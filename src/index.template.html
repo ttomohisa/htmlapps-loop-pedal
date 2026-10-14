@@ -456,6 +456,16 @@
     .lp-field.wide select {width:100%;}
     .lp-settings-note {width:100%;font-size:12px;color:var(--muted);margin:0;}
     .lp-record-info {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+    .lp-audio-check {box-shadow:none;border-color:var(--line);background:var(--surface);}
+    .lp-audio-check summary {padding:13px 15px;font-size:13px;}
+    .lp-audio-detail {display:grid;gap:10px;padding:0 15px 16px;}
+    .lp-audio-detail p {margin:0;color:var(--muted);font-size:12px;line-height:1.65;}
+    .lp-audio-data {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;font-size:12px;}
+    .lp-audio-data dt {color:var(--muted);overflow-wrap:anywhere;}
+    .lp-audio-data dd {margin:0;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere;}
+    .lp-shift-actions {display:flex;flex-wrap:wrap;gap:8px;}
+    .lp-shift-actions button {min-width:48px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:pointer;}
+    .lp-shift-actions button:focus-visible {outline:3px solid var(--focus);outline-offset:2px;}
     .lp-status {font-size:13px;line-height:1.55;font-weight:700;color:var(--accent);min-height:21px;}
     .lp-status.error {color:var(--danger);}
     .lp-sample-info {font-size:12px;color:var(--muted);}
@@ -626,6 +636,18 @@
           <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
       </div>
+      <details class="lp-audio-check" id="audioDiagnostics">
+        <summary data-i18n="audioDiagnostics">録音のずれ・音質を確認</summary>
+        <div class="lp-audio-detail">
+          <p data-i18n="audioDiagnosticsLead">音がずれたら、録音済みパッドの設定で再生位置を前後に調整できます。</p>
+          <dl class="lp-audio-data">
+            <dt data-i18n="audioDiagSampleRate">音声処理の周波数</dt><dd id="audioDiagRate">—</dd>
+            <dt data-i18n="audioDiagProcessing">マイクの自動補正</dt><dd id="audioDiagProcessing">—</dd>
+            <dt data-i18n="audioDiagOutput">再生側の遅延の目安</dt><dd id="audioDiagOutput">—</dd>
+          </dl>
+          <p data-i18n="audioDiagnosticsLimit">これらはブラウザから取得できる範囲の情報です。マイク入力の遅延や実際のイヤホン接続を測定・判定するものではありません。</p>
+        </div>
+      </details>
       <div class="lp-actions">
         <button class="button" id="pauseButton" type="button" disabled data-i18n="pause">一時停止</button>
         <button class="button danger" id="abortButton" type="button" disabled data-i18n="abort">録音を中止</button>
@@ -671,6 +693,11 @@
       <output id="gainValue">100%</output>
       <label class="lp-field"><span data-i18n="trackOffset">録音位置を調整（ミリ秒）</span><input id="shiftInput" type="range" min="-200" max="200" step="5" value="0"></label>
       <output id="shiftValue">0 ms</output>
+      <div class="lp-shift-actions">
+        <button type="button" id="shiftEarlier" data-i18n-aria-label="shiftEarlier" data-i18n="shiftEarlier">5 ms早める</button>
+        <button type="button" id="shiftReset" data-i18n="shiftReset">0 msに戻す</button>
+        <button type="button" id="shiftLater" data-i18n-aria-label="shiftLater" data-i18n="shiftLater">5 ms遅らせる</button>
+      </div>
       <p class="lp-dialog-note" data-i18n="offsetHelp">マイナスで早く、プラスで遅く鳴ります。元の音声は変わりません。</p>
       <div class="lp-dialog-row">
         <button type="button" class="button primary" id="rerecordButton" data-i18n="rerecord">録り直す</button>
@@ -1186,6 +1213,19 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "trackGain": "音量",
           "trackOffset": "録音位置を調整（ミリ秒）",
           "offsetHelp": "マイナスで早く、プラスで遅く鳴ります。元の音声は変わりません。",
+          "shiftEarlier": "5 ms早める",
+          "shiftReset": "0 msに戻す",
+          "shiftLater": "5 ms遅らせる",
+          "audioDiagnostics": "録音のずれ・音質を確認",
+          "audioDiagnosticsLead": "音がずれたら、録音済みパッドの設定で再生位置を前後に調整できます。",
+          "audioDiagSampleRate": "音声処理の周波数",
+          "audioDiagProcessing": "マイクの自動補正",
+          "audioDiagOutput": "再生側の遅延の目安",
+          "audioDiagnosticsLimit": "これらはブラウザから取得できる範囲の情報です。マイク入力の遅延や実際のイヤホン接続を測定・判定するものではありません。",
+          "notAvailable": "確認できません",
+          "processingEnabled": "一部オン",
+          "processingDisabled": "オフ",
+          "processingPartiallyKnown": "一部オフ（残り不明）",
           "rerecord": "録り直す",
           "deleteTrack": "この音を消す",
           "trackSettings": "の設定",
@@ -1301,6 +1341,19 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "trackGain": "Track volume",
           "trackOffset": "Timing offset (milliseconds)",
           "offsetHelp": "Negative moves the sound earlier, positive later. Original audio is unchanged.",
+          "shiftEarlier": "5 ms earlier",
+          "shiftReset": "Reset to 0 ms",
+          "shiftLater": "5 ms later",
+          "audioDiagnostics": "Check timing and sound quality",
+          "audioDiagnosticsLead": "If a track feels late, open that pad's settings and move playback slightly earlier or later.",
+          "audioDiagSampleRate": "Audio sample rate",
+          "audioDiagProcessing": "Microphone processing",
+          "audioDiagOutput": "Estimated output latency",
+          "audioDiagnosticsLimit": "This is only what your browser reports. It does not measure microphone capture latency or detect whether headphones are connected.",
+          "notAvailable": "Unavailable",
+          "processingEnabled": "Partly enabled",
+          "processingDisabled": "Off",
+          "processingPartiallyKnown": "Partly off (rest unknown)",
           "rerecord": "Re-record",
           "deleteTrack": "Delete this track",
           "trackSettings": "settings",
@@ -1469,6 +1522,18 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       const send = message => { if (engine) engine.port.postMessage(message); };
       const t = key => translations[language]?.[key] ?? translations.en[key] ?? key;
 
+      function updateAudioDiagnostics() {
+        $('#audioDiagRate').textContent = context?.sampleRate ? (context.sampleRate / 1000).toFixed(1) + ' kHz' : t('notAvailable');
+        const outputDelay = Number(context?.outputLatency);
+        $('#audioDiagOutput').textContent = Number.isFinite(outputDelay) && outputDelay >= 0
+          ? Math.round(outputDelay * 1000) + ' ms' : t('notAvailable');
+        const settings = microphone?.getAudioTracks()?.[0]?.getSettings?.() || {};
+        const options = ['echoCancellation','noiseSuppression','autoGainControl'];
+        const reported = options.filter(key => typeof settings[key] === 'boolean');
+        $('#audioDiagProcessing').textContent = !reported.length ? t('notAvailable')
+          : reported.some(key => settings[key]) ? t('processingEnabled')
+          : reported.length === options.length ? t('processingDisabled') : t('processingPartiallyKnown');
+      }
       function readableTrack(n) { return t('padName') + ' ' + (n + 1); }
       function updateModeNote() {
         $('#modeNote').textContent = t(mode() === 'headphones' ? 'modeNoteHeadphones' : 'modeNoteSpeaker');
@@ -1519,6 +1584,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#barsSelect').disabled = busy || any || exporting;
         $('#modeSelect').disabled = busy || exporting;
         $('#sampleInfo').textContent = $('#bpmInput').value + ' BPM · ' + $('#barsSelect').value + (language === 'ja' ? '小節' : ' bars') + (audioRate ? ' · ' + Math.round(audioRate / 1000 * 10) / 10 + ' kHz' : '');
+        updateAudioDiagnostics();
         for (let i = 0; i < 4; i++) {
           const pad = $('#pad' + i);
           const padStatus = $('#padStatus' + i);
@@ -1985,10 +2051,16 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#gainValue').textContent=$('#gainInput').value+'%';
         adjustSelected('gain',Number($('#gainInput').value)/100);
       });
-      $('#shiftInput').addEventListener('input',()=>{
-        $('#shiftValue').textContent=$('#shiftInput').value+' ms';
-        adjustSelected('shiftMs',Number($('#shiftInput').value));
-      });
+      function setShift(value) {
+        const adjusted = Math.max(-200,Math.min(200,Math.round(value/5)*5));
+        $('#shiftInput').value = String(adjusted);
+        $('#shiftValue').textContent = adjusted + ' ms';
+        adjustSelected('shiftMs',adjusted);
+      }
+      $('#shiftInput').addEventListener('input',()=>setShift(Number($('#shiftInput').value)));
+      $('#shiftEarlier').addEventListener('click',()=>setShift(Number($('#shiftInput').value)-5));
+      $('#shiftReset').addEventListener('click',()=>setShift(0));
+      $('#shiftLater').addEventListener('click',()=>setShift(Number($('#shiftInput').value)+5));
       $('#rerecordButton').addEventListener('click',()=>{
         const index=selectedPad;closeTrackDialog();queuePad(index,true);
       });
