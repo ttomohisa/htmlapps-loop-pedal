@@ -2,7 +2,7 @@
 
 Record sounds on four pads, loop each take to the same musical length, layer the tracks, and export a WAV file. Use everyday percussion, voice, guitar, or any sound picked up by your microphone.
 
-> **Development preview v0.3.0** — Improved loop-seam playback, microphone interruption handling, timing controls, and mobile UI. Physical-device latency measurement, Android/iPhone audio-route tests, and release screenshots are still pending. This is not a production release.
+> **Development preview v0.4.0** — Clearer pad states, improved Undo and interruption/reconnect handling, accessible dialogs, and the supplied canonical SVG icon. Physical-device latency measurement, Android/iPhone audio-route tests, and release screenshots are still pending. This is not a production release.
 
 [日本語 README](README.ja.md) · [Product specification](APP_SPEC.md) · [Acceptance matrix](ACCEPTANCE_MATRIX.md)
 
@@ -15,7 +15,10 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 - Short loop-seam smoothing preserving the source's first sample, applied to playback and WAV export.
 - Collapsible browser audio diagnostics. These values do **not** constitute an input-latency calibration.
 - Export 16-bit mono WAV: one loop, 30 seconds, or 60 seconds. Editable output filename.
-- Japanese and English UI. Audio is kept only in browser memory.
+- Japanese and English UI; each pad now indicates record/queued/recording/playing/paused/muted states in text and SVG, with screen-reader names.
+- Background scrolling is locked for Help and track/confirmation dialogs, including smartphone safe-area handling.
+- On audio interruption, uncommitted takes are discarded and finished tracks are preserved. A fully failed audio engine requires confirmed reload; unsaved takes cannot be recovered.
+- The user-supplied `assets/favicon.svg` is embedded unchanged as both the favicon and the header icon. Audio is kept only in browser memory.
 
 ## How to use
 
@@ -23,7 +26,7 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 2. Select **Enable microphone** and grant permission. No permission prompt appears on page load.
 3. Tap an empty pad. After four count-in beats, it automatically records the selected number of bars and begins looping.
 4. Tap another empty pad to queue a recording on the next loop boundary. Tap a recorded pad to mute or unmute it.
-5. Use a pad's settings to re-record, adjust gain/timing with ±5 ms buttons or reset, or delete it; the last committed recording can be undone.
+5. Use a pad's settings to re-record, adjust gain/timing with ±5 ms buttons or reset, or delete it; the last committed recording can be undone. If the page loses audio focus, explicitly resume after returning.
 6. Choose the export length and filename, then select **Download WAV**.
 
 ## Recording modes

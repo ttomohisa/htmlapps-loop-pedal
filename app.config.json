@@ -3,7 +3,7 @@
   "name": "Loop Pedal",
   "nameJa": "Loop Pedal / ループペダル",
   "slug": "loop-pedal",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Record up to four sounds, loop them in time, layer them together, and export the result as audio.",
   "descriptionJa": "身の回りの音を4トラックに録音し、同じ長さで繰り返しながら重ね、音声として保存します。",
   "defaultLanguage": "auto",

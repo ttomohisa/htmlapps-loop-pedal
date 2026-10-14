@@ -53,6 +53,31 @@ workflow, if credentials are configured. On Android Chrome and iPhone Safari:
   take should replace a previous completed take; stale events must not stop
   newly connected audio streams.
 
+## v0.4.0 interaction and recovery checks
+
+- Confirm the canonical `assets/favicon.svg` matches the delivered 64×64
+  supplied icon, including the browser tab favicon and upper-left brand artwork.
+- On iPhone Safari and Android Chrome, exercise Help, track settings and
+  confirmation dialogs at 320/360/390px. Drag inside and outside the dialogs;
+  background scroll stays fixed and scroll position returns after closing.
+- Check all six pad states (empty, queued, recording, playing, muted, paused)
+  show different SVG/text meaning, without relying only on color. Verify
+  keyboard and screen-reader names, `aria-pressed`, and the 1–4 shortcuts
+  without triggering while a form field is focused.
+- Test rapid taps while resuming AudioContext: at most one pad should be queued.
+  Cancel a queued take, pause an in-progress take, and verify the previously
+  committed recordings stay intact.
+- Try switching tabs while the microphone permission dialog is unresolved.
+  On returning, explicit resume is required; no take begins automatically.
+- Cause microphone mute/disconnect, then recover after unmute. Do not record
+  while the microphone is still muted. Check that stale events from previous
+  streams cannot interrupt a new stream.
+- Simulate an AudioWorklet processor error where possible. Mic tracks must stop;
+  the UI must disclose that reload may discard unsaved recordings. A stopped
+  processor must not be represented as successfully recovered.
+- Confirm single-HTML build includes no additional runtime resources or
+  duplicate SVG files for favicon/header icon.
+
 ## Latency, acoustic output and limitations
 
 `connect-src 'none'` prevents normal runtime connections, but does not prove

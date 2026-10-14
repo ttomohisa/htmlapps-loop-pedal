@@ -29,7 +29,8 @@ retained. No third-party runtime packages are currently required.
 ## Key safety behaviors
 
 - Handle microphone denial and device disconnect without erasing finished takes.
-- On interruption, cancel the uncommitted take; never resume recording silently.
+- On interruption, cancel the uncommitted take; never resume recording silently. The microphone remains blocked while its track is muted/ended, or while the page is hidden during permission handling.
+- If the AudioWorklet processor fails unrecoverably, stop microphone capture, disable recording/export actions that require the failed processor, and confirm before reloading a session containing unsaved audio.
 - Recording buffers are allocated to the fixed loop length, controlled by BPM/bars.
 - Undo and the previous take are retained until a new successful commit or deletion.
 - Require explicit confirmation before permanently deleting one or all tracks.
