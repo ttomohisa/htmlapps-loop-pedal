@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const vm = require('node:vm');
 const path = require('node:path');
 
@@ -298,9 +299,126 @@ test('loop phase remains exact after one thousand consecutive turns', () => {
 
 
 test('completed takes remain exportable while the microphone requires reconnection', () => {
-  assert.ok(app[1].includes("$('#downloadButton').disabled = !any || busy || exporting || !engine;"));
+  assert.ok(app[1].includes("$('#downloadButton').disabled = !any || busy || exporting || !engine || processorFailed;"));
   assert.ok(app[1].includes("if (needsResume) send({type:'interrupt'});"));
   assert.ok(app[1].includes("if (wasSuspended) await context.suspend();"));
   assert.ok(app[1].includes("pendingPad = -1;"));
   assert.ok(app[1].includes("state = hasTakes() ? 'paused' : 'ready';"));
+});
+
+
+test('canonical favicon exactly matches the user-approved SVG bytes', () => {
+  const icon = fs.readFileSync(path.join(__dirname, '..', 'assets', 'favicon.svg'));
+  const header = Buffer.from('blob ' + icon.length + '\0');
+  const blobSha = crypto.createHash('sha1').update(header).update(icon).digest('hex');
+  assert.equal(blobSha, '0fcbdb4495be37044c4fb31d27ba55142e00dcd4');
+  assert.match(icon.toString('utf8'), /<rect width="64" height="64" rx="16" fill="#16624f"\/>/);
+});
+
+test('four pads commit independent takes with one shared loop frame count', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  for(let i=0;i<4;i++){
+    send({type:'queue',index:i,mode:'speaker'});
+    if(i===0) processFrames(processor.beat*4);
+    else processFrames(N,0);
+    processFrames(N,0.25+i*0.1);
+    assert.equal(processor.phase,0);
+    assert.equal(processor.state,'playing');
+  }
+  for(let i=0;i<4;i++){
+    assert.equal(processor.tracks[i].pcm.length,N);
+    assert.ok(Math.abs(processor.tracks[i].pcm[0]-(0.25+i*0.1))<1e-6);
+  }
+});
+
+test('canceled re-recording leaves the original take and its mix settings intact', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+N,0.2);
+  send({type:'adjust',index:0,gain:0.42,shiftMs:-25,muted:true});
+  const old=processor.tracks[0];
+  send({type:'queue',index:0,mode:'headphones'});
+  assert.equal(processor.state,'queued');
+  processFrames(N+300,0.8);
+  assert.equal(processor.state,'recording');
+  send({type:'abort'});
+  assert.equal(processor.tracks[0],old);
+  assert.equal(processor.tracks[0].gain,0.42);
+  assert.equal(processor.tracks[0].muted,true);
+  assert.equal(processor.tracks[0].shiftMs,-25);
+});
+
+test('Undo of a re-record restores PCM, mute, gain and offset from before the take', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+N,0.3);
+  send({type:'adjust',index:0,muted:true,gain:0.45,shiftMs:50});
+  const old=processor.tracks[0];
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(N*2,0.8);
+  assert.equal(processor.tracks[0].muted,false);
+  assert.equal(processor.tracks[0].gain,0.45);
+  assert.equal(processor.tracks[0].shiftMs,50);
+  send({type:'undo'});
+  assert.equal(processor.tracks[0],old);
+  assert.equal(processor.tracks[0].muted,true);
+  assert.equal(processor.tracks[0].gain,0.45);
+  assert.equal(processor.tracks[0].shiftMs,50);
+});
+
+test('paused recording discards only the in-progress take and retains loop phase', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+N,0.2);
+  send({type:'queue',index:1,mode:'headphones'});
+  processFrames(N+120,0.5);
+  const phaseBefore=processor.phase;
+  send({type:'pause'});
+  assert.equal(processor.state,'paused');
+  assert.equal(processor.phase,phaseBefore);
+  assert.equal(processor.pending,null);
+  assert.ok(processor.tracks[0]);
+  assert.equal(processor.tracks[1],null);
+  processFrames(N*2,0.7);
+  assert.equal(processor.phase,phaseBefore);
+  send({type:'resume'});
+  processFrames(N,0.7);
+  assert.equal(processor.phase,phaseBefore);
+  assert.equal(processor.tracks[1],null);
+});
+
+test('queued second pad cannot interrupt or stack a different queued take', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+N,0.3);
+  send({type:'queue',index:1,mode:'speaker'});
+  send({type:'queue',index:2,mode:'speaker'});
+  assert.equal(processor.pending.index,1);
+  processFrames(N*2,0.6);
+  assert.ok(processor.tracks[1]);
+  assert.equal(processor.tracks[2],null);
+});
+
+test('v0.4 UI exposes state-specific SVG and safe recovery affordances', () => {
+  assert.match(html,/const PAD_SYMBOLS = Object\.freeze/);
+  for(const state of ['record','playing','muted','paused','queued','recording'])
+    assert.match(html,new RegExp(state+':'));
+  assert.match(html,/pad\.setAttribute\('aria-pressed'/);
+  assert.match(html,/pad\.removeAttribute\('aria-pressed'\)/);
+  assert.match(html,/trackDialog\.addEventListener\('close',unlockHelpBackground\)/);
+  assert.match(html,/dialog\.addEventListener\('close', unlockHelpBackground\)/);
+  assert.match(html,/requestGeneration !== generation/);
+  assert.match(html,/if \(processorFailed\) \{/);
+  assert.match(html,/window\.location\.reload\(\)/);
+  assert.match(html,/track\.readyState !== 'live' \|\| track\.muted/);
 });
