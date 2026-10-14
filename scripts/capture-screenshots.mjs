@@ -15,6 +15,8 @@ const bin=process.env.LOOP_PEDAL_BROWSER||(
 ).find(fs.existsSync);
 if(!bin)throw Error('Edge/Chromium executable missing');
 let server,browser,ws,tmp;
+// A broken browser command must fail CI rather than keeping a Windows runner stuck.
+const watchdog=setTimeout(()=>{console.error('Screenshot capture watchdog exceeded 80 seconds');process.exit(1);},80000);
 class CDP {
   constructor(socket){
     this.socket=socket;this.id=0;this.waiting=new Map();

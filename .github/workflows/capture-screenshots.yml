@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: loop-pedal-screenshots-${{ github.ref }}
+  group: loop-pedal-screenshots-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
