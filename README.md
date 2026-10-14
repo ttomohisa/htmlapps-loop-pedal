@@ -8,7 +8,7 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 
 > **Release candidate v1.0.0-rc.1** — Core recording and WAV export passed deterministic Node tests, and a headless Windows Edge session recorded two test-microphone tracks to capture real UI screenshots. iPhone/Android microphone paths, real headphone latency, external-player downloads, and acoustic quality remain unverified. This is **not a production release**.
 
-[日本語 README](README.ja.md) · [Product specification](APP_SPEC.md) · [Acceptance matrix](ACCEPTANCE_MATRIX.md)
+[日本語 README](README.ja.md) · [Product specification](APP_SPEC.md) · [Acceptance matrix](ACCEPTANCE_MATRIX.md) · [Release candidate review](RELEASE_REVIEW.md)
 
 ## Features
 

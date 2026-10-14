@@ -8,7 +8,7 @@
 
 > **リリース候補 v1.0.0-rc.1** — 主要機能の音声エンジン・WAV出力は自動テストで検証し、Windows版Edgeのヘッドレス環境でテスト用マイクから2トラックを録音した画面を撮影しました。iPhone/Android実機、イヤホン遅延の実測、外部プレイヤーでのファイル再生、音質の聴感確認は未完了のため、**正式リリースではありません**。
 
-[English README](README.md) · [製品仕様](APP_SPEC.md) · [受け入れ基準](ACCEPTANCE_MATRIX.md)
+[English README](README.md) · [製品仕様](APP_SPEC.md) · [受け入れ基準](ACCEPTANCE_MATRIX.md) · [リリース候補の確認項目](RELEASE_REVIEW.md)
 
 ## 機能
 
