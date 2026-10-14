@@ -1592,6 +1592,9 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       let generation = 0;
       let exportIndex = 0;
       const exportRequests = new Map();
+      let activeExportJob = null;
+      let exportedUrl = null;
+      let exportNotice = null;
       let statusOverride = '';
       const isBusy = () => ['queued', 'count-in', 'recording'].includes(state);
       const hasTakes = () => tracks.some(Boolean);
@@ -1611,6 +1614,26 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           : reported.some(key => settings[key]) ? t('processingEnabled')
           : reported.length === options.length ? t('processingDisabled') : t('processingPartiallyKnown');
       }
+      function setExportNotice(key, details = '') {
+        exportNotice = key ? {key, details} : null;
+        $('#exportResult').textContent = exportNotice ? t(key) + details : '';
+      }
+      function clearExportPreview(notice = false) {
+        const audio = $('#exportPreviewAudio');
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        $('#exportDownloadAgain').removeAttribute('href');
+        $('#exportPreviewBlock').hidden = true;
+        if (exportedUrl) URL.revokeObjectURL(exportedUrl);
+        exportedUrl = null;
+        if (notice) setExportNotice('exportChanged');
+        else if (!exporting) setExportNotice(null);
+      }
+      function markExportStale() {
+        if (!exportedUrl || exporting) return;
+        clearExportPreview(true);
+      }
       function readableTrack(n) { return t('padName') + ' ' + (n + 1); }
       function updateModeNote() {
         $('#modeNote').textContent = t(mode() === 'headphones' ? 'modeNoteHeadphones' : 'modeNoteSpeaker');
@@ -1627,6 +1650,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         $('#footerName').textContent = language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#closeTrackDialog').setAttribute('aria-label', t('close'));
         updateModeNote();
+        if (exportNotice) setExportNotice(exportNotice.key, exportNotice.details);
         updateUI();
       }
       function showError(message) {
@@ -1651,6 +1675,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         const busy = isBusy();
         const any = hasTakes();
         const ready = !!engine && activeMic && !needsResume && !processorFailed && !initializing && !exporting;
+        $('#cancelExportButton').hidden = !exporting;
         const status = $('#engineStatus');
         status.textContent = statusText();
         status.classList.toggle('error', Boolean(statusOverride) || processorFailed);
@@ -1766,10 +1791,10 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           state = hasTakes() ? 'paused' : 'ready';
           pendingPad = -1;
         }
+        if (['adjusted','committed','undone','deleted','cleared'].includes(message.kind)) markExportStale();
         if (message.kind === 'error') showError(t(message.reason === 'allocation' ? 'errorMemory' : 'errorGeneric'));
         if (message.kind === 'committed' && !needsResume && !processorFailed) {
           AppToast.show({message:t('recorded') + ' ' + readableTrack(message.index),tone:'success',duration:3200});
-          $('#exportResult').textContent = '';
         }
         if (message.kind === 'undone') AppToast.show({message:t('undone')});
         if (message.kind === 'aborted') AppToast.show({message:t('canceled')});
@@ -1956,6 +1981,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       }
       async function queuePad(index, forceReplace = false) {
         if (!engine || !activeMic || needsResume || processorFailed || initializing || exporting || queueGesturePending) return;
+        $('#exportPreviewAudio').pause();
         if (isBusy()) {
           if (pendingPad === index && state === 'queued') send({type:'abort'});
           return;
@@ -1985,6 +2011,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       async function togglePause() {
         if (!engine || !activeMic || needsResume || processorFailed || exporting || !hasTakes()) return;
         if (state === 'paused') {
+          $('#exportPreviewAudio').pause();
           const requestGeneration = generation;
           try {
             await context.resume();
@@ -2009,7 +2036,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         pendingPad = -1;
         state = 'ready';
         send({type:'clear',generation});
-        $('#exportResult').textContent = '';
+        clearExportPreview();
         updateUI();
       }
       function openTrackDialog(index) {
@@ -2206,6 +2233,15 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       $('#undoButton').addEventListener('click',()=>{if(!isBusy())send({type:'undo'});});
       $('#resetButton').addEventListener('click',resetAll);
       $('#downloadButton').addEventListener('click',downloadWav);
+      $('#cancelExportButton').addEventListener('click',cancelExport);
+      $('#exportDuration').addEventListener('change',markExportStale);
+      $('#exportDownloadAgain').addEventListener('click',event=>{
+        if (!exportedUrl) {event.preventDefault();return;}
+        $('#exportDownloadAgain').download=normalizedFilename()+'.wav';
+      });
+      $('#exportPreviewAudio').addEventListener('play',()=>{
+        if (!isBusy() && state === 'playing' && !needsResume && !processorFailed) send({type:'pause'});
+      });
       $('#outputFilename').addEventListener('blur',normalizedFilename);
       $('#closeTrackDialog').addEventListener('click',closeTrackDialog);
       const trackDialog=$('#trackDialog');
@@ -2241,7 +2277,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       document.addEventListener('visibilitychange',()=>{
         if (document.hidden && context && engine && activeMic) interruption('');
       });
-      window.addEventListener('pagehide',()=>{stopStream();if(context)context.close().catch(()=>{});});
+      window.addEventListener('pagehide',()=>{
+        if (activeExportJob) cancelExport();
+        clearExportPreview();
+        stopStream();
+        if(context)context.close().catch(()=>{});
+      });
       window.addEventListener('beforeunload',event=>{
         if(hasTakes()){event.preventDefault();event.returnValue='';}
       });
