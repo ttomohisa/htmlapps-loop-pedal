@@ -165,7 +165,7 @@ test('cancel and clear discard uncommitted data, and generation advances', () =>
   assert.ok(processor.tracks[0]);
   send({type:'clear',generation:1});
   assert.equal(processor.generation,1);
-  assert.deepEqual(processor.tracks,[null,null,null,null]);
+  assert.deepEqual(Array.from(processor.tracks),[null,null,null,null]);
   assert.equal(processor.state,'ready');
 });
 
