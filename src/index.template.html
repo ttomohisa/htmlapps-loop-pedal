@@ -2125,12 +2125,33 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         if (!job || job.cancelled) return;
         job.cancelled = true;
         setExportNotice('exportCanceling');
+        if (typeof job.cancelWait === 'function') job.cancelWait();
         const request = exportRequests.get(job.requestId);
         if (request) {
           clearTimeout(request.timeout);
           exportRequests.delete(job.requestId);
           request.reject(canceledExportError());
         }
+      }
+      function resumeForExport(job) {
+        return new Promise((resolve, reject) => {
+          let settled = false;
+          let timeout = 0;
+          function finish(error) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            job.cancelWait = null;
+            if (error) reject(error);
+            else resolve();
+          }
+          job.cancelWait = () => finish(canceledExportError());
+          timeout = setTimeout(() => finish(new Error('Audio resume timeout')), 12000);
+          // Invoke resume synchronously from the initiating click: some browsers
+          // require user activation to resume suspended audio contexts.
+          try { Promise.resolve(context.resume()).then(() => finish(null), finish); }
+          catch (error) { finish(error); }
+        });
       }
       async function encodeWav(snapshot,duration,job,onProgress=()=>{}) {
         const length = snapshot.length;
@@ -2196,7 +2217,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
       async function downloadWav() {
         if (!engine || !hasTakes() || isBusy() || exporting || processorFailed) return;
         exporting = true;
-        const job = {cancelled:false,requestId:null};
+        const job = {cancelled:false,requestId:null,cancelWait:null};
         activeExportJob = job;
         const wasSuspended = context.state !== 'running';
         const wasPlaying = state === 'playing' && !needsResume;
@@ -2213,7 +2234,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           // Pause first so a suspended context cannot produce a burst of
           // playback audio merely to service a snapshot request.
           send({type:needsResume ? 'interrupt' : 'pause'});
-          if (wasSuspended) await context.resume();
+          if (wasSuspended) await resumeForExport(job);
           if (job.cancelled) throw canceledExportError();
           if (sessionGeneration !== generation) throw new Error('Session changed');
           const snapshot = await requestSnapshot(job);
