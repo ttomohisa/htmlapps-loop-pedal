@@ -35,7 +35,14 @@ retained. No third-party runtime packages are currently required.
 - Undo and the previous take are retained until a new successful commit or deletion.
 - Require explicit confirmation before permanently deleting one or all tracks.
 - Generate WAV only after a user gesture. Protect output filenames against path
-  separators and unsafe platform characters.
+  separators, Windows-reserved device stems, unsafe controls and Unicode
+  bidirectional override characters.
+- WAV output is held in a local Blob URL for preview/re-download. Revoke it
+  when the source is changed, a new export supersedes it, or the page unloads.
+  Audio preview never sends recorded data to external services.
+- Export cancellation must discard only its temporary output, not completed
+  recording PCM or the previous take used by Undo. The app cannot detect
+  whether the operating system has actually finished saving a download.
 - Revoke Blob URLs and stop audio tracks when leaving the page.
 - Avoid claiming that microphone permissions or audio-routing behavior are
   universal across browsers and devices.

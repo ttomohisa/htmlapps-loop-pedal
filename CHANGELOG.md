@@ -4,6 +4,17 @@
 
 - Pending physical-device timing and microphone interruption verification, Japanese/English screenshots, and release gating.
 
+## 0.5.0 - WAV export and file workflow development preview - 2026-10-14
+
+- Added per-export cancel control and actual WAV conversion progress, without blocking all smartphone input while rendering.
+- Added a built-in local preview of exported audio, with a persistent explicit download link for browsers that suppress downloads after asynchronous work.
+- Kept preview WAV URLs in memory only and revoked them when recordings, mute/gain/offset, duration or session state invalidate the result.
+- Temporarily paused the shared loop during snapshot/export, then restored playback only when it was previously active and had not been interrupted.
+- Tightened audio snapshot validation and canceled/failed export cleanup; preserved finished tracks on cancel or errors.
+- Hardened file naming against invalid characters, Windows reserved device names, bidi controls and repeated WAV suffixes.
+- Extended Node tests to verify RIFF/WAVE PCM headers, sample counts, mute/gain/offset/loop-seam parity, 30/60-second fade-out, limiting and cancellation.
+- Remaining release gates: external-player opening of WAV on desktop/iPhone/Android, device latency measurement, acoustic seam listening tests, file:// microphone support and screenshots.
+
 ## 0.4.0 - Interaction and recovery development preview - 2026-10-14
 
 - Replaced the canonical `assets/favicon.svg` with the user's supplied 1,321-byte SVG, embedded unchanged in both favicon and header icon through the template build.

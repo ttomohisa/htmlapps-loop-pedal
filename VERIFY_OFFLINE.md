@@ -78,6 +78,33 @@ workflow, if credentials are configured. On Android Chrome and iPhone Safari:
 - Confirm single-HTML build includes no additional runtime resources or
   duplicate SVG files for favicon/header icon.
 
+## v0.5.0 WAV output verification
+
+- Record up to four tracks, including muted and volume-adjusted tracks, and
+  export WAV at one-loop, 30 s, and 60 s lengths. Validate the resulting
+  RIFF/WAVE PCM 16-bit, mono, actual sample rate and frame counts.
+- A single loop must contain exactly N samples without an end fade.
+  A fixed-duration export must end with a 250 ms fade.
+- Download files with user-edited names, repeated `.wav` suffixes, control
+  characters and Windows-reserved stems. Check the downloaded name on each OS.
+- Observe progress during a 60-second export and choose Cancel mid-export.
+  The uncommitted output is discarded, existing tracks remain playable,
+  and a new export can be started immediately.
+- Try starting two exports rapidly. Ensure only one is accepted and its
+  snapshot, filename, duration and progress stay consistent.
+- After completion, preview the generated WAV and use the explicit download
+  link again. If browser-initiated download did not occur, the user-tapped
+  link must still work. Never claim a file is saved without checking.
+- Change mute, gain, offset, delete/undo, or duration. The prior preview and
+  link must disappear; old Blob URLs must be revoked.
+- Test export while paused and while microphone capture requires recovery:
+  no unfinished take is committed and finished tracks survive.
+- Open the downloaded WAV in at least one **external** audio player on
+  Windows, iPhone and Android. Record device, browser, filename, duration
+  and playback result; Node tests alone do not satisfy these gates.
+- Test both standalone HTML variants with network disabled and ensure
+  neither playback nor WAV preview triggers an external request.
+
 ## Latency, acoustic output and limitations
 
 `connect-src 'none'` prevents normal runtime connections, but does not prove

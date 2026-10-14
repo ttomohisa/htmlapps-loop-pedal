@@ -2,7 +2,7 @@
 
 Record sounds on four pads, loop each take to the same musical length, layer the tracks, and export a WAV file. Use everyday percussion, voice, guitar, or any sound picked up by your microphone.
 
-> **Development preview v0.4.0** — Clearer pad states, improved Undo and interruption/reconnect handling, accessible dialogs, and the supplied canonical SVG icon. Physical-device latency measurement, Android/iPhone audio-route tests, and release screenshots are still pending. This is not a production release.
+> **Development preview v0.5.0** — WAV output now has cancelable progress, playback preview, a persistent download fallback, and stronger filename/format verification. Device latency measurements, iPhone/Android audio routing, actual downloads in external players, and release screenshots still need physical-device checks.
 
 [日本語 README](README.ja.md) · [Product specification](APP_SPEC.md) · [Acceptance matrix](ACCEPTANCE_MATRIX.md)
 
@@ -14,7 +14,8 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 - Per-pad mute, gain, non-destructive timing adjustment (−200 to +200 ms, 5 ms steps), re-record, and last-recording Undo.
 - Short loop-seam smoothing preserving the source's first sample, applied to playback and WAV export.
 - Collapsible browser audio diagnostics. These values do **not** constitute an input-latency calibration.
-- Export 16-bit mono WAV: one loop, 30 seconds, or 60 seconds. Editable output filename.
+- Export 16-bit mono PCM WAV: one loop (without an end fade), 30 seconds, or 60 seconds (with a 0.25-second end fade). Editable and sanitized filenames.
+- Cancellable progress during export, local audio preview, and an explicit retry-download link that remains available until tracks or export duration change.
 - Japanese and English UI; each pad now indicates record/queued/recording/playing/paused/muted states in text and SVG, with screen-reader names.
 - Background scrolling is locked for Help and track/confirmation dialogs, including smartphone safe-area handling.
 - On audio interruption, uncommitted takes are discarded and finished tracks are preserved. A fully failed audio engine requires confirmed reload; unsaved takes cannot be recovered.
@@ -27,7 +28,8 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 3. Tap an empty pad. After four count-in beats, it automatically records the selected number of bars and begins looping.
 4. Tap another empty pad to queue a recording on the next loop boundary. Tap a recorded pad to mute or unmute it.
 5. Use a pad's settings to re-record, adjust gain/timing with ±5 ms buttons or reset, or delete it; the last committed recording can be undone. If the page loses audio focus, explicitly resume after returning.
-6. Choose the export length and filename, then select **Download WAV**.
+6. Choose the export length and filename, then select **Download WAV**. Export temporarily pauses loop playback. While generating, use **Cancel export** to stop without losing your recordings. Once ready, preview the WAV in the built-in player and use **Download WAV again** if your browser didn't begin a download.
+7. Download requests are initiated by the browser, but the app cannot verify whether your OS saved the file. Check the destination folder or files app. Editing a track or changing duration invalidates the earlier preview.
 
 ## Recording modes
 
@@ -37,7 +39,7 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 
 ## Privacy and local data
 
-Audio capture, PCM tracks and WAV export run in the browser. No audio is uploaded, automatically synced, or sent to analytics/telemetry. No runtime CDN is used. The generated HTML uses a `connect-src 'none'` Content Security Policy. Takes are kept in memory only and disappear after refresh or closing the page.
+Audio capture, PCM tracks and WAV export run in the browser. No audio is uploaded, automatically synced, or sent to analytics/telemetry. No runtime CDN is used. The generated HTML uses a `connect-src 'none'` Content Security Policy. Takes and prepared WAV previews are kept only in memory and disappear after refresh or closing the page. The WAV is held as a temporary local Blob URL; previous URLs are revoked when audio or output duration changes.
 
 ## Browser support and limitations
 
