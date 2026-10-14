@@ -1,56 +1,43 @@
-# Security Policy
+# Loop Pedal Security Policy
 
-## Supported version
+## Supported versions
 
-Security fixes target the latest version on the default branch.
+Security fixes target the latest development or released version in the repository.
 
-## Reporting a vulnerability
+## Reporting security issues
 
-Do not publish sensitive vulnerability details in a public issue. Use the repository owner's private security reporting channel when available.
-
-Include:
-
-- Affected commit or version.
-- Reproduction steps.
-- Expected and actual behavior.
-- Security impact.
-- A minimal test file when file parsing is involved.
+Do not expose sensitive vulnerability details in public issues. Use private
+security reporting when available, including reproduction steps, affected
+commit/version and expected/actual behavior.
 
 ## Trust model
 
-The default template is a static browser application with no backend. Its primary protections are:
+Loop Pedal is a static single-HTML application and has no audio backend.
+Audio comes from a microphone that is requested only after user action.
+Capture and mixing take place in the browser's Web Audio/AudioWorklet environment.
+Completed tracks are held in memory, with no automatic persistence or remote upload.
+The user explicitly starts any WAV download.
 
-- No ordinary runtime CDN/API connection (`connect-src 'none'`). Optional peer-to-peer WebRTC must be explicit in the product specification and must not introduce hidden signaling/STUN/TURN services.
-- Explicitly pinned and embedded third-party files.
-- Committed `dependencies.lock.json` tarball SHA-256 values verified before embedding.
-- SHA-256 records in the generated dependency manifest.
-- No analytics, telemetry, remote fonts, or silent update checks.
-- User-initiated downloads rather than automatic uploads.
+The runtime Content Security Policy retains `connect-src 'none'`, and there
+are no runtime CDN assets, remote fonts, analytics or telemetry. The local
+AudioWorklet source is embedded in the generated HTML and loaded using a Blob URL;
+its ability to load in direct `file://` contexts must be tested per browser.
 
-A generated HTML file is executable code. Distribute it through a trusted channel and verify hashes for high-trust workflows.
+The template's pinned dependency mechanism, lockfile and build verification are
+retained. No third-party runtime packages are currently required.
 
-If an app uses `components/webrtc-qr-pairing.html`, treat the paired browser as an explicit data recipient. “No server upload” does not mean “data never leaves this device.” Keep the manual signaling and `iceServers: []` boundary visible in the UI/help text, and do not silently add STUN/TURN later.
+## Key safety behaviors
 
-## Input files
+- Handle microphone denial and device disconnect without erasing finished takes.
+- On interruption, cancel the uncommitted take; never resume recording silently.
+- Recording buffers are allocated to the fixed loop length, controlled by BPM/bars.
+- Undo and the previous take are retained until a new successful commit or deletion.
+- Require explicit confirmation before permanently deleting one or all tracks.
+- Generate WAV only after a user gesture. Protect output filenames against path
+  separators and unsafe platform characters.
+- Revoke Blob URLs and stop audio tracks when leaving the page.
+- Avoid claiming that microphone permissions or audio-routing behavior are
+  universal across browsers and devices.
 
-Applications created from this template may parse untrusted local files. Implementations should:
-
-- Validate type, size, and structure before expensive processing.
-- Avoid unbounded allocation or recursion.
-- Handle malformed data without exposing stack traces to users.
-- Release Blob URLs, workers, canvas resources, and large buffers.
-- Make destructive transformations reversible where practical.
-- Never upload a selected file unless the product explicitly requires it and the user is clearly informed.
-
-## Dependency review
-
-Before adding or upgrading a package:
-
-- Confirm the package identity and exact version.
-- Review the scheduled dependency Issue; never treat an available update as an automatic approval to upgrade.
-- Review its license and required notices.
-- Inspect the browser bundle and package scripts.
-- Confirm every runtime support asset is embedded.
-- Refresh the selected lock entry with the dependency scripts; never hand-edit a lock hash to bypass a mismatch.
-- Rebuild with a clean cache.
-- Test with the network disabled.
+A downloaded HTML file executes code. Obtain it from a trusted source and
+review or verify it before use in sensitive environments.

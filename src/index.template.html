@@ -494,6 +494,7 @@
     .lp-export-result {min-height:20px;color:var(--muted);font-size:12px;overflow-wrap:anywhere;}
     .lp-dialog {width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 24px);border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--text);padding:0;box-shadow:var(--shadow-md);}
     .lp-dialog::backdrop {background:rgba(0,0,0,.45);}
+    @media (max-width:520px) { .lp-dialog {max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));} .lp-dialog-inner {padding-bottom:calc(18px + env(safe-area-inset-bottom));} }
     .lp-dialog-inner {display:grid;gap:14px;padding:18px;max-height:calc(100dvh - 24px);overflow:auto;}
     .lp-dialog-head {display:flex;align-items:center;justify-content:space-between;gap:16px;}
     .lp-dialog-head h2 {margin:0;font-size:18px;}
@@ -528,8 +529,8 @@
           <img id="appBrandIcon" src="__APP_ICON_DATA_URI__" alt="">
         </div>
         <div class="brand-copy">
-          <p class="brand-name"><span id="brandName">Single HTML App Starter</span><span class="version-badge" id="versionBadge">v1.1.0</span></p>
-          <p class="brand-meta" data-i18n="brandMeta">Single file · Local-first · GitHub Pages</p>
+          <p class="brand-name"><span id="brandName">Loop Pedal</span><span class="version-badge" id="versionBadge">v1.1.0</span></p>
+          <p class="brand-meta" data-i18n="brandMeta">4トラック · 端末内処理</p>
         </div>
       </div>
       <div class="header-actions">
@@ -674,7 +675,7 @@
     </div>
   </dialog>
 
-  <footer><span id="footerName">Single HTML App Starter</span> · MIT License · <span data-i18n="footer">Generated as one self-contained HTML file</span></footer>
+  <footer><span id="footerName">Loop Pedal</span> · MIT License · <span data-i18n="footer">Generated as one self-contained HTML file</span></footer>
   <div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" data-tone="default">
     <span class="app-toast-message" id="appToastMessage"></span>
     <button class="app-toast-action" id="appToastAction" type="button" hidden></button>
@@ -1644,6 +1645,13 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         try {
           if (!context) {
             context = new (window.AudioContext || window.webkitAudioContext)({latencyHint:'interactive'});
+            context.addEventListener('statechange', () => {
+              // Mobile OS audio focus changes can suspend the context without
+              // a visibility event. Do not auto-restart an unfinished take.
+              if (context.state !== 'running' && activeMic && !initializing && !needsResume) {
+                interruption('');
+              }
+            });
             // Start/resume in the initiating user gesture before permission prompts.
             const initialResume = context.resume();
             const source = $('#loopWorkletSource').textContent;

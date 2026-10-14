@@ -1,11 +1,11 @@
 # Loop Pedal — ACCEPTANCE_MATRIX.md
 
-> **Status:** Acceptance plan / 検証計画（全項目未実施）  
+> **Status:** Development preview / 検証計画（CI部分実施・実機未実施）  
 > **Document version:** 0.1.0 / **Created:** 2026-10-14  
 > **Product specification:** [`APP_SPEC.md`](APP_SPEC.md)  
 > **Target release:** v1.0.0
 
-この表は「実装したか」ではなく「ユーザーの作業が正しく終わるか」で合否を判定するためのもの。現時点で**全ケースは未実施**。試験結果を推測して `PASS` に変更しない。
+この表は「実装したか」ではなく「ユーザーの作業が正しく終わるか」で合否を判定するためのもの。現時点で正式リリースの全受け入れは未完了。開発用の音声クロック自動試験は実行済みだが、個別受け入れケースをすべて `PASS` に変更したものではない。
 
 ---
 
@@ -68,7 +68,7 @@ OS・ブラウザのビルド番号、端末名、マイク/出力機器、有�
 
 ## 3. 受け入れケース
 
-すべてのケースの初期状態は **NOT RUN**。記録時には「ケースID / Status / Browser・Device / Commit SHA / Test date / Evidence URLまたはログ / 備考」を埋める。
+下記のケース表は元の受け入れ仕様であり、正式判定の初期状態は **NOT RUN**。記録時には「ケースID / Status / Browser・Device / Commit SHA / Test date / Evidence URLまたはログ / 備考」を埋める。
 
 ### A. 初期化・マイク権限（v0.1.0）
 
@@ -350,3 +350,12 @@ Reviewer:
 - Current template reference: https://github.com/ttomohisa/htmlapps-template
 
 **注意:** このドキュメントは受け入れ計画であり、検証の合格報告ではない。検証実施後に各ケースのStatusと証跡を更新する。
+
+## 開発プレビュー検証ログ（2026-10-14）
+
+- Branch: `feat/loop-pedal-audio-prototype`（Draft PR #1）
+- [音声ユニット試験 + テンプレート検証成功](https://github.com/ttomohisa/htmlapps-loop-pedal/actions/runs/38516692427) — 9件のNodeテスト、PowerShell構文検証、単一HTML生成・検証。
+- [独立ビルド検証成功](https://github.com/ttomohisa/htmlapps-loop-pedal/actions/runs/38516692180) — テンプレート標準の単一HTMLビルド検証。
+- 対象: JS構文、テンプレートの必須プレースホルダー/CSP、整数サンプル長、4拍カウントイン、次ループ開始と250msガード、4トラック取り扱い、取消/Undo/録り直し、音声スナップショット。
+- 未実施: iPhone/Androidの実マイク、実機オーディオルーティング、物理遅延測定、音声出力の聴感、`file://`実機、アクセシビリティ詳細、WAVの外部プレイヤー検証。
+- 上記CI成功はv1.0.0のP0すべてに対する合格宣言ではない。
