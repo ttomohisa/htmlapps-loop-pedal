@@ -1,128 +1,491 @@
-# APP_SPEC.md
+# Loop Pedal — APP_SPEC.md
 
-This file is the product contract for the application created from this template. Replace the starter specification below before asking an LLM to build a new product.
+> **Status:** Draft for implementation / 企画確定案（未実装・実機検証前）  
+> **Document version:** 0.1.0 / **Created:** 2026-10-14  
+> **Target product:** Loop Pedal（仮称） / **Target release:** v1.0.0  
+> **Related:** [`ACCEPTANCE_MATRIX.md`](ACCEPTANCE_MATRIX.md)  
+> **Project:** Browser Kitty / **Brand primary:** `#16624F`
 
-## 1. Product identity
+この文書は Loop Pedal の実装・レビュー・受け入れ判定に使う製品仕様の正とする。実装時は、その時点の `ttomohisa/htmlapps-template` の `AGENTS.md`、ビルド構成、共通部品を改めて確認する。記載した数値のうち「目標」は検証前の設計値であり、実機で達成済みという意味ではない。リポジトリ名・URL・公開状態は未確定である。
 
-- **Working name:** Single HTML App Starter
-- **One-sentence purpose:** Demonstrate the template's local-first, responsive, bilingual, single-file application foundation.
-- **Primary users:** Developers and LLM coding agents starting a new browser utility.
-- **Release artifacts:** `dist/index.html`, `dist/index.self-extract.html`, and a repository-root copy of the readable build named from `repository.name` with a leading `htmlapps-` removed
+---
 
-## 2. Problem and outcome
+## 1. 製品の定義
 
-The starter must make the repository's constraints visible and testable without pretending to be a finished end-user product. A user can enter text, see basic counts, copy it, save it, and persist it locally.
+### 1.1 名前と説明
 
-A successful replacement app should state here:
+- **日本語名:** Loop Pedal / ループペダル
+- **英語名:** Loop Pedal
+- **一文説明（日本語）:** 身の回りの音や楽器を4つのトラックに録音し、同じ長さで繰り返しながら重ねて、音声として保存するブラウザツール。
+- **One-line description (English):** Record up to four sounds, loop them in time, layer them together, and export the result as audio.
+- **製品コンセプト:** 「録音する → 自動でループする → もう一つ重ねる」を、初心者でも4つの大きなパッドから操作できること。
 
-- What concrete problem it solves.
-- Who experiences the problem.
-- What result the user gets in one session.
-- Why a local single-HTML implementation is useful.
+### 1.2 誰が使うか
 
-## 3. Core user flow
+1. **音遊び・親子での利用:** 机、手拍子、鼻歌、声などを使い、機材なしで即興の組み合わせを楽しむ。
+2. **楽器の練習:** ギターのコード進行などを録音し、その繰り返しに合わせて演奏する。
+3. **声の多重録音:** ベース、リズム、ハーモニー、メロディーを別トラックに録って確認する。
 
-1. Open the page locally or through GitHub Pages.
-2. Enter or paste text.
-3. See character, word, and line counts update immediately.
-4. Edit the suggested output filename, then copy or download the text.
-5. Use Clear or Restore sample and undo the reversible change from the toast when needed.
-6. Reload and recover the locally saved text.
+### 1.3 解決する問題
 
-## 4. Functional requirements
+- 複数の音を合わせるために録音アプリと再生アプリを何度も切り替える必要がある。
+- 自分で正確なタイミングに録音開始・停止するのが難しい。
+- 小さな画面で多機能なDAWを操作するには学習負担が大きい。
+- 保存したいのは短い音の重なりなのに、アカウント作成・機材・クラウド機能が求められる。
 
-- Provide a responsive text area.
-- Calculate Unicode-aware character count.
-- Calculate approximate word and line counts.
-- Copy text with a compatibility fallback.
-- Download UTF-8 plain text with a user-editable output filename and a predictable `.txt` extension.
-- Save the current text in local storage when available.
-- Use the reusable `AppToast.show()` Undo pattern for reversible Clear / Restore sample operations. Reserve `AppConfirm.ask()` for irreversible or high-risk actions.
-- Switch Japanese and English without reloading.
-- Use a light-only interface; do not add a dark-mode or theme switcher.
-- Expose build version, generation timestamp, and embedded dependency count.
+### 1.4 成功とみなす利用体験
 
-## 5. Data and privacy
+初回訪問者がマイクを許可し、最初の2小節を録音して自動ループ再生し、別のパッドへ音を重ね、失敗した録音だけを取り消して、WAVを保存できる。主要操作のためにマニュアルを読む必要がない。
 
-- Input text remains in browser memory and local storage.
-- The app performs no runtime network request.
-- There is no server-side storage, login, analytics, telemetry, or tracking.
-- Download occurs only after a user action.
+### 1.5 非目標
 
-## 6. Non-goals
+- フル機能のDAW、波形の切り貼り、マルチトラックの詳細編集。
+- 1トラックへ無制限に追加するオーバーダブ、複数の録音レイヤー履歴。
+- 自動テンポ検出、ピッチ補正、拍補正、楽器分離。
+- MIDI、外部フットスイッチ、エフェクト、クラウド同期、共有URL、共同作業。
+- 既存録音に対するBPM変更時のリアルタイムタイムストレッチ。
+- Bluetooth接続を含む、全機器での自動・完全な録音遅延補正。
 
-- Collaborative editing.
-- Cloud synchronization.
-- Rich text formatting.
-- Server-side conversion.
-- Account management.
+---
 
-## 7. UX and accessibility
+## 2. 製品原則・優先順位
 
-- Mobile-first responsive layout from 320px upward.
-- All controls have visible labels or accessible names.
-- Keyboard focus is visible.
-- Motion respects `prefers-reduced-motion`.
-- Reversible changes provide a visible Undo action in the reusable toast.
-- Irreversible or high-risk destructive actions use the reusable confirmation component, centered on desktop and presented as a safe-area-aware bottom sheet on smartphones.
-- Status messages use an `aria-live` region.
-- If the finished app needs persistent smartphone access to 3-5 sections or workflow actions, reuse `components/mobile-bottom-bar.html` rather than inventing another fixed bottom bar. For long multi-section tools, prefer its mobile page-tab mode (`data-mobile-page-target`) so tapping a bottom tab shows only that group on smartphones while desktop still shows all sections. Keep unavailable actions disabled until their prerequisites exist.
+- **主画面は4パッド中心。** PCでもスマートフォンでも、現在の録音・再生状態を一目で把握できる。
+- **ボタン操作は拍に吸着。** 録音開始・終了をUIスレッドのタイマーやユーザーのタップ精度に依存させない。
+- **誤操作に強い。** 録り直し開始だけでは元のテイクを失わず、新しい録音が正常完了した時点で確定する。
+- **イヤホンなしを無理に「普通の多重録音」と呼ばない。** スマホだけの場合、新しい音の録音中は既存トラックのスピーカー再生を止める制約を見える形で伝える。
+- **正確に説明する。** 完全な自動同期や、自動で音響的なハウリング・回り込みを消せるとは表示しない。
+- **端末内処理。** 録音データの外部送信、ログイン、CDN、テレメトリーを不要にする。
+- **単一HTML配布を重視。** AudioWorklet / Blob URL / CSP / `file://` の実動作を検証し、未検証のプラットフォームでは断言しない。
 
-## 8. Performance expectations
+**開発優先度:** ①録音の成立 ②同期・中断安全性 ③操作の分かりやすさ ④保存の正確性 ⑤装飾 ⑥高度機能。
 
-- Initial UI should become interactive without network access.
-- Input updates should remain smooth for at least 100,000 characters on a typical desktop browser.
-- Avoid rebuilding large DOM sections on every keystroke.
+---
 
-## 9. Browser target
+## 3. v1.0.0の機能範囲と既定値
 
-Current stable desktop and mobile versions of Chromium, Firefox, and Safari. Direct `file://` opening is required.
+| 項目 | v1.0.0仕様 |
+| --- | --- |
+| トラック数 | 固定4トラック。各トラックに確定済みテイク1件。 |
+| トラック種別 | モノラル音声。録音ソースはブラウザが提供するマイク入力。 |
+| 拍子 | 4/4に固定。 |
+| BPM | 40〜200、整数、初期値100。 |
+| 小節数 | 1 / 2 / 4小節、初期値2小節。 |
+| ループ長 | `N = round(sampleRate × 60 / BPM × 4 × 小節数)` サンプル。全トラックで共通。 |
+| ループ開始 | 最初の録音は4拍のカウントイン後、録音済みの次トラックは次のループ境界で開始。 |
+| 自動終了 | Nサンプル取得後に自動終了し、テイクを確定・ループ再生。 |
+| 待機のキャンセル | 録音待機中のパッドを再度タップするか「録音を中止」でキャンセル。 |
+| 録り直し | トラックのメニューから実行。新テイク確定前は旧テイクを保持。 |
+| 最後の録音を取り消す | 全トラックを通じて直近1回の**成功した録音確定**をUndo可能。録り直しの場合は旧テイクへ復元。 |
+| ミュート | 各録音済みパッドのタップで切り替え。再生位相は進み続ける。 |
+| 音量 | 各トラック個別の音量、初期値100%、調整幅0〜100%。 |
+| 録音時の出力 | 後述の「イヤホンで重ね録り」「スマホだけで録音」の2方式。 |
+| モニター | マイク入力を直接スピーカーへ返さない（入力モニターは初期版では非対応）。 |
+| タイミング微調整 | トラックごとに −200ms〜+200ms、5ms刻み、初期値0ms。負値は早める。 |
+| 書き出し | PCM 16-bit モノラル WAV。ループ1回分、30秒、60秒。 |
+| 30/60秒書き出し | トラック合成を繰り返し、指定時間で切り、最後0.25秒をフェードアウト。 |
+| ループ1回分書き出し | ループ可能な素材として、最後に楽曲終了用フェードを付けない。 |
+| ファイル名 | ユーザーが拡張子を除いて編集可能。既定 `loop-pedal-YYYYMMDD-HHMMSS.wav`。 |
+| 翻訳 | 日本語 / 英語。初期言語はブラウザ言語を参考にし、手動変更可能。 |
+| データ保持 | 画面を開いている間はメモリ内に保持。自動クラウド保存や永続的な自動保存は行わない。 |
+| UI | ライトテーマ、ブランドカラー `#16624F`、SVGアイコン、グラデーション不要。 |
 
-## 10. Acceptance criteria
+**設定をロックする条件:** 有効な録音が1つ以上ある間はBPMと小節数を変更できない。変更には「新しいループを作る」で全トラックを消去する確認が必要。録音済みテイクの速度・ピッチを暗黙に変えない。
 
-- `build-standalone.ps1` produces the readable HTML, a gzip self-extracting variant, and an exact repository-root copy named from `repository.name` with a leading `htmlapps-` removed (for example `htmlapps-tap-counter` → `tap-counter.html`).
-- Embedded asset bytes are Base64-encoded exactly once; the complete asset-bundle JSON is not wrapped in a second Base64 layer.
-- Assets configured with `gzip` / `auto` can be read through the async embedded-asset API, and the build writes `build-size-report.json`.
-- `scripts/verify-standalone.ps1` passes.
-- The self-extract loader is ASCII-only, inherits the embedded favicon from the readable HTML, and restores the source HTML byte-for-byte.
-- The generated HTML contains no unresolved build placeholder.
-- The generated HTML contains no external script, stylesheet, frame, module import, or CSS asset URL.
-- Runtime CSP includes `connect-src 'none'`.
-- The full core user flow works after opening either generated HTML directly.
-- No data leaves the page.
-- Japanese and English copy both fit at 360px width.
-- Clear happens immediately but offers Undo for long enough to recover the previous text.
-- The output filename can be edited before download; invalid filename characters are sanitized and an empty name falls back to the app slug.
+**未録音時:** BPMと小節数は自由に変更可能。録音待機/録音中は変更不可。
 
-## 11. Open decisions for a new app
+---
 
-Replace these with explicit decisions before implementation:
+## 4. 録音方式（必須のUX分岐）
 
-- Maximum accepted input size.
-- Supported input file types.
-- Export file formats, default filename, editable filename behavior, sanitization, and extension rules.
-- Persistence strategy and reset behavior.
-- Undo/redo scope.
-- Error and recovery behavior, including stale async-result invalidation when inputs can change during processing.
-- Explicit async phases (`empty`, `ready`, `loading-runtime` if needed, `processing`, `result`, `error`) for heavy processing apps.
-- Mobile relationship between previews and their directly related controls.
-- Smartphone navigation model: bottom-tab page switching, section-scrolling bottom bar, workflow-action bar, or no fixed bottom bar.
-- Media coordinate/orientation strategy when drawing overlays.
-- Required third-party libraries.
-- Whether the app intentionally needs peer-to-peer WebRTC. If so, decide whether the fully serverless same-LAN QR pairing component is appropriate, what DataChannels are required, and how paired-device data is described to users.
-- Whether bilingual UI is required.
+### 4.1 イヤホンで重ね録り
 
-## In-app help
+- 録音中も、既存トラックのループをイヤホンへ再生する。
+- マイク入力そのものはスピーカー/イヤホンへ通さない。マイクの直接モニターは非搭載。
+- 有線イヤホンを推奨する。Bluetooth音声は入出力の遅延や経路変更によりずれ得るため、精度を保証しない。
+- 「イヤホン接続を検知した」と表示しない。ブラウザから接続状態を確実に判定できる前提を置かず、利用者に録音方式を選択してもらう。
+- 初回録音のカウントインは短いクリック音と視覚表示を併用できる。
 
-The upper-right header includes a compact help button. It opens a bilingual “使い方と注意事項” dialog containing:
+### 4.2 スマホだけで録音（初期設定）
 
-- the real user workflow,
-- privacy and local-processing behavior,
-- limitations and data-loss risks,
-- any browser or device constraints relevant to the app.
+- 録音の準備中までは通常どおりループを再生できる。
+- **新テイクの実録音区間に入ると、既存トラック・メトロノームをスピーカーへ出力しない。** 実録音中は拍・小節を視覚表示する。
+- 録音終了後、既存トラックと新トラックの合成再生を再開する。
+- この方式は再生音のマイクへの回り込みを減らすための仕様であり、録音しながら既存音を聴くことはできない。
+- 画面と音だけでの手拍子合わせには人間の反応誤差があり得る。精度の高い音楽演奏にはイヤホン方式を案内する。
+- カウントイン中は短いクリック音を鳴らしてよいが、**実録音中はクリック音を出さない**。録音開始前にクリックが切れることを確認する。
 
-Acceptance criteria: help content is updated together with each user-facing behavior change, contains no leftover starter instructions, and remains fully scrollable at narrow smartphone widths / short viewport heights so the final item and close control are always reachable.
+**ユーザー向け表記例:**
 
-## WebRTC readiness requirement
+> スマホだけで録音：ほかの音が録音に混ざらないよう、録音中は再生音を止めます。音を聴きながら重ねる場合はイヤホンを使ってください。
 
-When an app uses peer-to-peer WebRTC DataChannels, define which reliable channel represents application readiness. Custom channel layouts must set `readyChannelLabel`; do not define application-ready from ICE/PeerConnection `connected` alone.
+### 4.3 方式の切り替え
+
+- 初期状態は「スマホだけで録音」。初回マイク利用時に現在の方式を明示し、いつでも設定で変更できる。
+- 録音待機中・録音中は方式変更を禁止する。停止中または通常再生中に変更した設定は次の録音から適用。
+- ヘッドセット着脱などで音声経路が変わった場合、進行中のテイクを安全に中止し、既存テイクを保持して入力を再初期化する。ブラウザの経路変更検知が不完全な環境では、ユーザーへ手動の再準備操作を案内する。
+
+---
+
+## 5. 主要ユーザーフロー
+
+### 5.1 初回起動
+
+1. ページを表示。4パッドは見えるが、マイクを勝手に要求しない。
+2. テンポ・小節数・録音方式を確認または変更できる。
+3. 「マイクを使って録音」を押したとき、利用目的と端末内処理の説明を表示し、ユーザー操作に続いて音声エンジンとマイクを初期化する。
+4. 権限が許可され、音声エンジンが `ready` になってから録音パッドを有効化する。許可ダイアログ表示中に録音開始カウントを進めない。
+5. 許可拒否時は原因・再試行方法を表示し、ページや既存録音を初期化しない。
+
+### 5.2 最初の音を録音する
+
+1. 空のパッドをタップする。
+2. 4拍のカウントイン。進行はAudioWorklet側の音声クロックに従う。
+3. 自動録音開始。進行中は「録音中」「小節1/2」「残り拍数」を表示。
+4. Nサンプルで自動終了。録音が有効ならテイクを確定し、直後から同じNサンプルのループとして再生。
+5. 録音途中に「録音を中止」または再生停止を押した場合、未完成テイクを破棄。最初の録音なら空状態へ戻る。
+
+### 5.3 2つ目以降の録音
+
+1. 再生中に別の空パッド（または録り直しを選んだパッド）をタップすると、録音待機へ入る。
+2. 少なくとも250msの準備時間が確保できる**次のループ先頭**を開始境界とする。250ms未満なら、その次のループ先頭まで待つ。
+3. 待機中は「次のループで録音」と残り拍数を表示。再タップで待機をキャンセルする。
+4. 開始境界で、選択した録音方式に沿ってNサンプルを取得する。
+5. 完了後、新テイクを確定しループ再生へ合流する。旧テイクを差し替えた場合は旧テイクと録音前のトラック設定をUndo用に保持する。
+6. 録り直しで対象トラックに旧テイクがある場合、その旧テイクは**新テイクの収録中だけ**モニター出力から除外する（イヤホン方式では他のトラックを聴く）。録り直し失敗・キャンセルなら旧テイクと元のミュート状態へ戻る。成功時は元の音量・補正量を引き継いでミュート解除する。
+7. 他のパッドへの録音待機を同時に設定しない。録音・待機できるのは一度に1トラック。
+
+### 5.4 演奏・やり直し・削除
+
+- **空パッドをタップ:** 録音待機。最初の録音はカウントイン。
+- **録音済みパッドをタップ:** ミュート／ミュート解除。録音済みであることとミュート中であることは色以外でも区別する。
+- **録音待機中の対象パッドを再タップ:** 待機キャンセル。
+- **録音中の対象パッドを再タップ:** 誤操作で短いテイクを確定しない。「録音を中止」の明示操作を使う。録音中はパッドに録音状態を表示。
+- **各パッドのメニュー:** 録り直す／音量／タイミング調整／この音を消す。
+- **録り直し:** 既存の録音は新テイクの成功時だけ差し替える。失敗・キャンセルなら旧テイクを復元しなくてもそのまま残す。
+- **最後の録音を取り消す:** 全トラックを通じた直近1件の成功したテイク確定を巻き戻す。初回録音をUndoする場合は対象パッドが空に戻る。録り直しの場合は旧PCMと録音直前のミュート・音量・補正設定を復元する。以後の新規成功録音、トラック削除、全消去で直前録音のUndo履歴は破棄するが、ミュート・音量・補正の変更だけでは履歴を破棄しない。
+- **この音を消す:** 録音済みテイクを1トラック消去。v1.0.0では実行前に確認する（削除後の復元は非対応）。削除により直前録音Undo履歴も破棄する。
+- **新しいループを作る:** すべての録音を消去しUndo履歴も破棄する。取り消せない消去として確認ダイアログを出す。設定値は原則維持。
+
+### 5.5 再生/停止
+
+- 最初のテイクが確定すると自動再生。空セッションでは再生ボタン無効。
+- 再生中のミュートはパッドだけを無音にし、内部位相は止めない。
+- 全体の一時停止ではループの位相も止め、再開時は停止位置から続ける。
+- 録音待機・録音中に一時停止した場合は、先に未確定の録音をキャンセルしてから再生を一時停止する。確定済みテイクは変わらない。
+- 全4パッドがミュートの場合も、再生中の位相は進み続ける。
+
+### 5.6 保存
+
+1. 1件以上の録音が確定しており、待機・録音・中断復旧中でないときに「音声を保存」を有効化。
+2. 出力設定で「ループ1回 / 30秒 / 60秒」「編集可能なファイル名」を選択。
+3. 再生で聴くものと同じミュート状態・個別音量・タイミング補正・合成処理を適用してPCMを書き出す。
+4. WAV（16-bit、モノラル、AudioContextで採用したサンプルレート）を生成し、ユーザー操作で端末へ保存する。
+5. エラーが起きた場合は保存失敗を表示し、録音セッションは保持する。保存後も編集・再生できる。
+
+**30/60秒エクスポートの定義:** 指定秒数に達するまでループを繰り返し、最後の0.25秒でフェードアウト。ループ長が指定秒数を超えていても指定秒数で切り、フェードする。1ループ素材では楽曲終了用フェードを付けない。
+
+---
+
+## 6. 状態モデルと不変条件
+
+### 6.1 セッション状態
+
+`uninitialized` → `requesting-microphone` → `initializing-audio` → `ready-empty` → `count-in` → `recording` → `playing` ↔ `paused`
+
+補助状態: `record-queued` / `exporting` / `interrupted` / `error-recoverable` / `unsupported`。
+
+- マイク権限と音声エンジンの準備は独立に追跡し、両方が有効になった時点で録音可能とする。
+- `exporting` は録音・セッション変更を禁止し、保存失敗後も従前の録音を保持する。
+- `interrupted` からは自動で録音再開しない。利用者の明示操作で音声を再準備する。
+- `unsupported` ではサポート外APIまたはセキュリティ条件を具体的に表示し、機能していないUIを放置しない。
+
+### 6.2 トラック状態
+
+| 状態 | 説明 | 許される主操作 |
+| --- | --- | --- |
+| `empty` | テイクなし | 録音する |
+| `queued` | 次の録音開始境界を待つ | 待機キャンセル |
+| `recording` | Nサンプルを収録中 | 明示的な録音中止 |
+| `playing` | テイク保持、再生対象 | ミュート／管理メニュー |
+| `muted` | テイク保持、出力だけ無音 | ミュート解除／管理メニュー |
+| `replacing` | 既存テイクを保持しつつ新テイクを収録待機・収録 | キャンセル（元に戻す） |
+
+実装内部では `queued` / `recording` と旧テイクの有無を別軸で保持してよい。ただしUI上では録り直し中にも「旧録音は保持されています」が分かること。
+
+### 6.3 不変条件
+
+1. 同じセッションの全確定テイクはサンプルレート・ループ長Nを共有する。
+2. すべてのトラックは1つの音声クロックと整数サンプル位相を参照する。`setInterval` / `requestAnimationFrame` を録音境界判定に使わない。
+3. 実録音できるトラックは同時に最大1つ。
+4. キャンセル・録音中断・権限喪失・古い非同期完了通知によって確定済みテイクを上書きしない。
+5. 音声バッファ変更の確定とUndo用履歴更新を原子的に実施する。
+6. ミュート変更・音量変更・タイミング変更は録音PCMを破壊的に書き換えない。
+7. エクスポート時は開始時点の音声データ・設定のスナップショットを使う。
+8. セッション初期化・AudioWorklet再起動・マイク再接続時には世代番号（generation）を増やし、古い完了イベントを無視する。
+9. 再生と録音の音量経路では、マイク入力が意図せず出力に返らない。
+10. 出力形式の合成が失敗しても、録音データは削除しない。
+
+---
+
+## 7. 音声処理アーキテクチャ
+
+### 7.1 推奨パイプライン
+
+```text
+getUserMedia({ audio: ... })
+  └─ MediaStreamAudioSourceNode ──┐
+                                  ▼
+                     AudioWorkletNode (共通クロック)
+                       ├─ 入力PCMを収録
+                       ├─ 音声サンプル位置を追跡
+                       ├─ 全トラックを同一位相で再生
+                       ├─ パッドごとのmute / gain / offset
+                       └─ 合成出力 → AudioDestinationNode
+
+Main thread
+  ├─ 4パッド、録音方式、設定、Undo、エラー表示
+  ├─ AudioWorkletとの制御メッセージ（世代番号付き）
+  ├─ 確定したPCMとUndo参照の安全な管理
+  └─ PCMのオフライン合成 → WAVエンコード → ダウンロード
+```
+
+- PCMの受け渡し方式は実装時に決定する。ただしAudioWorkletの `process()` 内で大きなメモリ確保、ファイル生成、非同期I/Oは行わない。
+- `AudioContext.sampleRate` を実際の値として採用。44,100Hz / 48,000Hzを最低限テストする。
+- AudioWorkletモジュールの単一HTML埋め込みは `Blob URL` 方式を候補とし、HTTPS・`file://`・CSPの実機検証を必須とする。Blob URLが利用できることを無検証で前提にしない。
+- 入力は原則1ch。マイクが複数chで届く場合は明示的にモノラルへ変換する。
+- ループ長Nは**セッション開始時に決定し、途中で変えない**。
+
+### 7.2 時間軸の定義
+
+- N = `Math.round(actualSampleRate * 60 / BPM * 4 * bars)`。
+- ループ位相 = `absoluteSampleFrame % N`。
+- 開始境界・終了境界・メトロノーム・表示用の拍位置はこの位相を基準とする。
+- UI表示はWorkletからの通知・現在位相に追従する。UI更新が遅れても実際の録音位置はずれない。
+- 整数サンプルの丸めに由来する微小なテンポ差は許容する。トラックごとに別の丸めを行わない。
+- 既存トラックのループ再生は独立した `AudioBufferSourceNode` を毎周発火させる方式よりも、一つの共通ミキサー内で再生位相を統一する方式を優先する。
+
+### 7.3 端末由来の遅延と録音位置調整
+
+**区別すべき2種類のずれ:**
+
+1. **内部の同期ずれ:** 別トラックの録音・再生が異なる時計で動くことによるずれ。共通Workletクロックで抑制する。
+2. **人が聴いてからマイクで収録されるまでのずれ:** 再生デバイス、入力経路、Bluetooth、OS処理、人間の反応などの影響。Web Audioのクロック同期だけでは解消できない。
+
+`baseLatency`、`outputLatency`、`getOutputTimestamp()` 等は診断情報として扱い、**マイク入力と出力の往復遅延が分かったと断定しない**。入力遅延を根拠なく推定して自動補正しない。
+
+v1.0.0では、各トラックへ非破壊の位置補正（−200ms〜+200ms / 5ms刻み）を設ける。負値はタイミングを早める。補正はループ長Nに対して循環させ、再生とWAV保存の両方へ同一結果を適用する。変更は安全な境界で反映し、操作直後の破裂音を避ける。
+
+遅延の自動校正（スピーカー→マイクの測定等）は将来候補。初期版で自動校正済みを表示しない。
+
+### 7.4 音の継ぎ目と音量
+
+- ループ境界で不連続が生じた際にクリック音が目立たないよう、必要に応じて数msの非破壊的な境界処理を行う。
+- 拍の頭のアタック（手拍子・机の音）を過度に減衰させない。長いフェードで音楽的内容を失わない。
+- 4トラック合成時にクリッピングが起き得るため、再生とWAV書き出しで同じゲイン／安全なピーク制御を使用する。正規化の有無・動作はUI説明と一致させる。
+- マイクの入力ゲインはOS・機器の影響を受ける。`autoGainControl` / `echoCancellation` / `noiseSuppression` は原則 `false` を要求するが、ブラウザが従う保証はない。`getSettings()` で確認可能な場合は診断へ表示する。
+- 実装時に波形クリップ検出用の簡単なピークレベル表示を検討する。ただし高機能なミキサーは作らない。
+
+### 7.5 メモリ・計算負荷
+
+- 4トラック×4小節×40 BPM×48kHz×32-bit mono PCMで、確定音声本体は概算約18.4MB（10進表記）。旧テイク・録音中バッファ・エクスポート中の複製も考慮する。
+- PCMバッファはサイズを先に確定し、処理ブロックごとの一時オブジェクト作成を避ける。
+- 30秒/60秒の出力では必要以上の中間配列を保持せず、可能な限りチャンク単位でエンコードする。
+- 書き出し中は進捗とキャンセル可能性を検討する。エラーでセッションを失わない。
+- メモリ不足、AudioWorklet停止、入力途絶には、無理な自動復旧でデータを上書きしない安全停止を優先する。
+
+---
+
+## 8. 画面構成・UI仕様
+
+### 8.1 スマートフォン（優先）
+
+```text
+[Loop Pedal]                             [?] [設定]
+音を録って、重ねてみよう
+
+[100 BPM ▼] [2小節 ▼]   [録音方式]
+
+┌─────────────┐ ┌─────────────┐
+│   音 1       │ │   音 2       │
+│  再生中      │ │  ミュート     │
+│   [•••]      │ │   [•••]      │
+└─────────────┘ └─────────────┘
+┌─────────────┐ ┌─────────────┐
+│   音 3       │ │   音 4       │
+│  録音中      │ │  録音する     │
+│   [•••]      │ │             │
+└─────────────┘ └─────────────┘
+
+[ 小節1/2  ●●○○ | ○○○○ ]
+[録音を中止]   [一時停止/再生]
+
+[最後の録音を取り消す]
+[音声を保存]
+```
+
+この図は情報配置の例であり、実装画面では絵文字ではなくSVGアイコンを用いる。4パッドは2×2のまま表示し、通常のスマホ幅では横スクロールを発生させない。タップ対象は原則44px以上とし、小さな設定操作がパッド主操作に重ならないようにする。
+
+**下部固定UI:** 初期版は常設しない。4パッドと重要操作が一画面に収まりやすいため。実機で縦長画面・短いviewportを確認し、必要なら固定バーを1系統に限り採用する。固定UIがコンテンツを隠さないこと。
+
+### 8.2 PC
+
+- 4パッドの2×2構成は共通。周囲にトラックの音量や補正情報を表示してよい。
+- UIを無理に音楽制作ソフト風のタイムラインにしない。
+- キーボードの `1`〜`4` をパッド操作へ割り当てられるようにする。ただし入力欄フォーカス中は発火しない。
+- `Space` は再生／一時停止（入力欄等は除外）。Esc はダイアログやメニューを閉じる。
+
+### 8.3 状態表示
+
+各パッドで文字＋形状／アイコンの両方を使い、色だけで区別しない。
+
+- 空: 「録音する」/ Record
+- 録音待機: 「次のループで録音」/ Queued
+- 録音中: 「録音中」/ Recording、進捗
+- 再生: 「再生中」/ Playing
+- ミュート: 「ミュート」/ Muted
+- 録り直し中: 「録り直し中。元の音は保持」/ Re-recording; original kept
+- 保存完了: ファイル名・長さ・保存形式を表示
+- 保存失敗: 保存できなかった理由・再試行導線を表示
+
+### 8.4 詳細設定とヘルプ
+
+- 重要度の低い設定（音量、録音位置調整、詳細診断）は折りたたみ／ポップオーバー内に入れる。
+- 「使い方と注意事項」には、基本操作、イヤホン方式とスマホだけ方式、録音が一時データであること、WAV出力、対応ブラウザ、端末内処理、録音中断、Bluetooth遅延を記載する。
+- 警告は現象と対処法を平易な言葉で説明し、AudioWorklet等の技術用語を一般画面に出さない。
+- ダイアログはスマホの短い縦幅でも閉じるボタンと末尾へ到達可能にする。
+
+### 8.5 アクセシビリティ
+
+- 2×2パッドをそれぞれ正規のbuttonとして実装。`aria-label` と状態を適切に提示。
+- キーボード・スクリーンリーダーで録音状態と残り時間を理解できる。
+- アクティブ録音中の視覚的な点滅は `prefers-reduced-motion` で抑制する。
+- ボタンには焦点可視化。色覚に依存せず操作状態を識別可能。
+- カウントダウンは1秒未満の高頻度で `aria-live` を連続発火させない。要点の状態遷移のみ通知。
+
+---
+
+## 9. エラー・中断・保存済みデータの保護
+
+| 状況 | 必須の反応 |
+| --- | --- |
+| マイク拒否 | 録音不可と理由・権限変更の案内。既存テイクは維持。 |
+| マイクが見つからない | 入力機器の確認を促す。再試行できる。 |
+| 安全なコンテキストではない | 録音に対応するHTTPS等で開くよう案内。 |
+| AudioWorkletを利用できない | 非対応状態と理由を表示。黙って不正確な録音方式へフォールバックしない。 |
+| AudioWorkletモジュール読み込み失敗 | CSP / URL / ブラウザ問題を分離して診断し、既存テイクを維持。 |
+| 録音中にページが非表示・画面ロック・通話 | 未確定テイクを破棄して一時停止。既存テイク維持。明示的な復帰操作を表示。 |
+| マイク入力トラック終了 | 未確定テイクを破棄し、再許可・再接続を案内。 |
+| 音声機器の変更 | 録音継続が安全か検証。継続保証できない場合は安全停止・再初期化。 |
+| 録音が短すぎる・入力無音 | 指定長の収録が完了すればテイクとして扱う。無音の場合は「音がほとんど入りませんでした」を表示し、録り直し可能。 |
+| 音声処理異常・バッファ不足 | 未確定テイクのみ破棄、既存テイクを守り、再試行可否を表示。 |
+| WAV生成失敗 | 録音を保持。保存処理の再試行とファイル名確認が可能。 |
+| 全消去 | 必ず確認。実行後は録音バッファとUndo参照を開放。 |
+| タブ終了・ページ更新 | 自動永続化しないため録音は失われる。可能な場合は破棄前の確認を行うが、モバイルでの確認表示は保証できない。 |
+| 多重タップ・古いイベント到着 | 二重録音・古いセッションの復活・二重ダウンロードを防止。 |
+
+---
+
+## 10. プライバシー・ネットワーク・単一HTML
+
+- サーバーへの録音音声、生成した音声、使用状況、マイクのデバイスIDのアップロードは禁止。
+- 自動的な外部API、外部CDN、遠隔分析、フォント取得、トラッキングは不要。
+- 通常のアプリ実行時のCSPは原則 `connect-src 'none'` を維持し、AudioWorkletを動かすための `blob:` 等は最小限のディレクティブへ限定して設定する。
+- 初回WebサイトHTMLのダウンロード通信と、録音データの外部送信は別に説明する。
+- マイク権限は利用者の操作後にのみ要求する。既定で録音/送信しない。
+- 「完全ローカル処理」は、完成ビルドをネットワーク監視し、録音内容が外部に送られないことを確認できた場合のみUIで使用する。
+- エクスポートを除き、録音PCM・再生データはメモリに保持。ブラウザストレージへの自動永続化はしない。
+- 追加ライブラリは原則不要。導入する場合はビルド時に埋め込み、バージョン固定・ライセンス明記。
+- 通常の単一HTML（およびテンプレートが生成する追加の単一HTML版）で主要機能を検証する。
+- **検証条件:** HTTPSホスティング、デスクトップ `file://`、主要スマホブラウザ。特にiOS Safariの `file://` / AudioWorklet読み込みは未検証事項として扱い、実測で非対応なら制約を明記する。黙って「全端末でファイルから録音できる」とは書かない。
+
+---
+
+## 11. ブラウザ対応・リリース品質
+
+- **優先:** Android Chrome、iPhone Safari、Desktop Chrome / Edge。
+- **追加検証:** Desktop Firefox、macOS Safari、その他対応可能なブラウザ。
+- 必須APIがない場合には対応ブラウザへの案内を表示。
+- 音声再生をユーザー操作から開始する。音声コンテキストが停止／中断したときには復帰操作を出す。
+- `visibilitychange`・マイク入力の `ended`・AudioContextの状態変化を監視する。OSの通話やBluetooth機器切替を100%検出できるという前提を置かない。
+- スマホでは320 / 360 / 390px、PCでは768 / 1280px相当の表示幅を確認する。
+- 日英両方で、空・待機・録音・再生・ミュート・中断・保存・失敗状態を確認する。
+- README（日英）、スクリーンショット（日英）、favicon、LICENSE、CHANGELOG、単一HTML、CSP・通信監査をリリース時に用意する。
+- 既存Browser Kittyサイト本体のコピーやコードは、この新アプリの実装段階で明示的な依頼がない限り変更しない。
+
+---
+
+## 12. 開発ロードマップ（Semantic Versioning）
+
+### v0.1.0 — Audio Engine Prototype
+
+**成果:** 1トラック録音、カウントイン、Nサンプルの自動終了と継続ループ、WAV生成。AudioWorklet / マイクの最小動作と実機での中断検証。  
+**判定:** 内部サンプル境界・基本デバイスでの録音成立。成立しないプラットフォーム制約を記録。
+
+### v0.2.0 — Four Tracks & Quantization
+
+**成果:** 4トラック同一クロック、録音待機、次周回の先頭開始、ミュート、連続ループ、独立した録音中止。  
+**判定:** 異なるトラックの相対位相が長時間再生してもずれない。
+
+### v0.3.0 — Mobile Capture & Latency Gate
+
+**成果:** イヤホン方式、スマホだけ方式、録音位置補正、機器差の検証、音の継ぎ目処理。  
+**判定:** 主要実機で録音・同期・再生が成立。補正してもずれが許容できない場合は機能を増やす前に設計を見直す。
+
+### v0.4.0 — Interaction & Recovery
+
+**成果:** 4パッドUI、Undo、録り直しの原子的確定、個別音量、確認ダイアログ、エラー表示、中断復帰。  
+**判定:** 通常操作・誤操作・中断後の既存録音が保護される。
+
+### v0.5.0 — Export & File UX
+
+**成果:** ループ1回 / 30秒 / 60秒のWAV、ファイル名編集、クリッピング保護、保存結果確認。  
+**判定:** 書き出しを他の音声プレイヤーで開けて、ループ素材と終了用音声が仕様どおりになる。
+
+### v1.0.0 — Release Candidate / Release
+
+**成果:** 日英、スマホ/PC、実機品質、アクセシビリティ、README、favicon、スクリーンショット、単一HTML、CSP/外部通信監査、全受け入れ項目の実施。  
+**判定:** `ACCEPTANCE_MATRIX.md` の必須（P0）に未解決不合格がなく、例外がある場合は非対応環境を明記してリリース判断を行う。
+
+---
+
+## 13. 重要な技術ゲートと目標値
+
+- **内部同期:** 同じサンプルレート・ループ長の4トラックは、音声クロックの境界判定で1サンプル以内にそろう。1000ループ反復後にもトラック間で累積ドリフトを生じない（人工入力による測定）。
+- **境界制御:** ループ開始・録音終了・ミュート状態反映が、Workletで定義したサンプル位置に従う。メインスレッドを意図的に遅延させても境界がずれない。
+- **端末遅延:** 物理的な往復遅延のゼロ保証はしない。実機の有線イヤホン条件で、補正後の相対ずれを確認し、目標は基準測定環境で±25ms以内。達成状況を実測で記録する（人手演奏の誤差は別管理）。
+- **動作安定性:** 10分以上の連続再生、4トラック保存、マイク拒否・中断・復帰ができる。
+- **メモリ/容量:** BPM 40・4小節・4トラック・最大出力60秒でブラウザが破綻しない。入力サンプルレートが通常範囲を超える場合のメモリ制約は明示する。
+- **保存の一致:** 実再生と書き出しで、ミュート、音量、時間補正、クリッピング対策が一致する。
+
+目標値は「事前の受け入れ指標」であり、実機での達成実績ではない。詳細な実施項目・測定方法は `ACCEPTANCE_MATRIX.md` を参照。
+
+---
+
+## 14. 将来検討（v1.0.0の範囲外）
+
+- パッド内多重オーバーダブ、複数段Undo / Redo。
+- 演奏中のミュート操作まで取り込む「演奏を録音」。
+- フットスイッチ、MIDIコントローラー、キーボードショートカット拡張。
+- リバーブ、ディレイ、フィルター、テンポ検出。
+- トラック名変更、プロジェクト保存と復元、ステム別WAV。
+- 入出力校正ウィザード、自動遅延推定。
+- 音声ファイルの取り込み、ビートプリセット。
+
+**将来候補の追加基準:** 4パッドですぐ遊べる体験を邪魔しないこと。追加によりセットアップ負担や音声安定性が大きく悪化するなら見送る。
+
+---
+
+## 15. 参照情報（実装前の技術検証用）
+
+- MDN — `getUserMedia`: https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+- MDN — AudioWorklet: https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet
+- MDN — Using AudioWorklet: https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Using_AudioWorklet
+- MDN — `getSettings()`: https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getSettings
+- MDN — `baseLatency`: https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/baseLatency
+- MDN — `outputLatency`: https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/outputLatency
+- MDN — `getOutputTimestamp()`: https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/getOutputTimestamp
+- MDN — Page Visibility API: https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
+- Template reference (2026-10-14): https://github.com/ttomohisa/htmlapps-template
+
+これらのWeb API資料は実装上の参照であり、Loop Pedalにおける実機動作の検証結果そのものではない。
