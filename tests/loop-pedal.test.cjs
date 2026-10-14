@@ -580,3 +580,32 @@ test('WAV filename handles invalid separators, reserved names, controls and repe
   }
   assert.match(normalizedFilenameFor('   ').name,/^loop-pedal-\d{8}-\d{6}$/);
 });
+
+
+test('suspended audio context export can be canceled before a late resume settles',async()=>{
+  const context={resume:()=>new Promise(()=>{})};
+  const source=[
+    appFunction('canceledExportError'),appFunction('resumeForExport'),
+    'resumeForExport'
+  ].join('\n');
+  const resume=vm.runInNewContext(source,{context,setTimeout,clearTimeout,Promise});
+  const job={cancelled:false,cancelWait:null};
+  const pending=resume(job);
+  assert.equal(typeof job.cancelWait,'function');
+  job.cancelled=true;
+  job.cancelWait();
+  await assert.rejects(pending,err=>err.name==='AbortError');
+  assert.equal(job.cancelWait,null);
+});
+
+test('suspended audio context resume settles cleanly when audio becomes available',async()=>{
+  const context={resume:()=>Promise.resolve()};
+  const source=[
+    appFunction('canceledExportError'),appFunction('resumeForExport'),
+    'resumeForExport'
+  ].join('\n');
+  const resume=vm.runInNewContext(source,{context,setTimeout,clearTimeout,Promise});
+  const job={cancelled:false,cancelWait:null};
+  await resume(job);
+  assert.equal(job.cancelWait,null);
+});
