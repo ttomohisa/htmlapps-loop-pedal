@@ -506,6 +506,18 @@
     .lp-filename input {width:100%;min-width:0;border-radius:9px 0 0 9px;}
     .lp-filename span {padding:11px;background:var(--surface-muted);border:1px solid var(--line-strong);border-left:0;border-radius:0 9px 9px 0;color:var(--muted);font-size:13px;}
     .lp-export-result {min-height:20px;color:var(--muted);font-size:12px;overflow-wrap:anywhere;}
+    .lp-export-commands {display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .lp-export-commands .button {min-height:44px;padding:9px 13px;}
+    .lp-export-progress {display:grid;gap:5px;}
+    .lp-export-progress[hidden],.lp-export-preview[hidden],#cancelExportButton[hidden] {display:none !important;}
+    .lp-export-progress progress {width:100%;height:10px;accent-color:var(--accent);}
+    .lp-export-progress span {font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+    .lp-export-preview {display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px;}
+    .lp-export-preview audio {display:block;width:100%;max-width:100%;min-width:0;}
+    .lp-export-download {display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 14px;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:750;}
+    .lp-export-download:hover {background:var(--accent-hover);}
+    .lp-export-download:focus-visible {outline:3px solid var(--focus);outline-offset:2px;}
+    .lp-export-preview p {margin:0;color:var(--muted);font-size:12px;line-height:1.6;}
     .lp-dialog {width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 24px);border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--text);padding:0;box-shadow:var(--shadow-md);}
     .lp-dialog::backdrop {background:rgba(0,0,0,.45);}
     @media (max-width:520px) { .lp-dialog {max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));} .lp-dialog-inner {padding-bottom:calc(18px + env(safe-area-inset-bottom));} }
@@ -663,10 +675,23 @@
           <label class="lp-field" for="exportDuration"><span data-i18n="duration">長さ</span>
             <select id="exportDuration"><option value="loop" data-i18n="durationLoop">ループ1回</option><option value="30" data-i18n="duration30">30秒</option><option value="60" data-i18n="duration60">60秒</option></select>
           </label>
-          <button class="button primary" id="downloadButton" type="button" disabled data-i18n="downloadWav">WAVを保存</button>
+          <div class="lp-export-commands">
+            <button class="button primary" id="downloadButton" type="button" disabled data-i18n="downloadWav">WAVを保存</button>
+            <button class="button" id="cancelExportButton" type="button" hidden data-i18n="cancelExport">書き出しを中止</button>
+          </div>
         </div>
         <span class="sr-only" id="filenameNote" data-i18n="filenameHint">拡張子 .wav は自動で付きます</span>
+        <div class="lp-export-progress" id="exportProgressWrap" hidden>
+          <progress id="exportProgress" max="100" aria-label="WAV変換の進捗" data-i18n-aria-label="exportProgressLabel"></progress>
+          <span id="exportProgressText" aria-hidden="true"></span>
+        </div>
         <div class="lp-export-result" id="exportResult" role="status" aria-live="polite"></div>
+        <div class="lp-export-preview" id="exportPreviewBlock" hidden>
+          <strong data-i18n="exportPreviewTitle">作成したWAVを確認</strong>
+          <audio id="exportPreviewAudio" controls preload="metadata" aria-label="作成したWAVの試聴" data-i18n-aria-label="exportPreviewLabel"></audio>
+          <p data-i18n="exportPreviewHint">試聴を始めるとループ再生は一時停止します。ファイルの保存は端末側で確認してください。</p>
+          <a class="lp-export-download" id="exportDownloadAgain" href="#" download data-i18n="downloadAgain">もう一度WAVを保存</a>
+        </div>
       </section>
       <p class="lp-warning" data-i18n="memoryNote">録音は一時的なものです。ページを閉じると消えます。必要な音声は保存してください。</p>
     </section>
@@ -1214,9 +1239,20 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "duration30": "30秒",
           "duration60": "60秒",
           "downloadWav": "WAVを保存",
+          "cancelExport": "書き出しを中止",
+          "exportProgressLabel": "WAVの生成状況",
+          "exportPreparing": "WAVの準備中…",
           "exporting": "WAVを作成しています…",
-          "exportReady": "WAVファイルを用意しました",
+          "exportSaving": "WAVファイルの準備ができました。",
+          "exportReady": "WAVを作成しました。ダウンロードできたか端末で確認してください。",
+          "exportCanceled": "WAVの書き出しを中止しました。録音は残っています。",
+          "exportCanceling": "書き出しを中止しています…",
           "exportFail": "WAVを作成できませんでした。録音は残っています。",
+          "exportPreviewTitle": "作成したWAVを確認",
+          "exportPreviewLabel": "作成したWAVの試聴",
+          "exportPreviewHint": "試聴を始めるとループ再生は一時停止します。ファイルの保存は端末側で確認してください。",
+          "downloadAgain": "もう一度WAVを保存",
+          "exportChanged": "音や出力の設定を変更しました。必要ならWAVを再作成してください。",
           "memoryNote": "録音は一時的なものです。ページを閉じると消えます。必要な音声は保存してください。",
           "trackGain": "音量",
           "trackOffset": "録音位置を調整（ミリ秒）",
@@ -1350,9 +1386,20 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "duration30": "30 seconds",
           "duration60": "60 seconds",
           "downloadWav": "Download WAV",
+          "cancelExport": "Cancel export",
+          "exportProgressLabel": "WAV export progress",
+          "exportPreparing": "Preparing WAV…",
           "exporting": "Creating WAV…",
-          "exportReady": "WAV ready",
+          "exportSaving": "WAV audio is ready.",
+          "exportReady": "WAV prepared. Confirm the download on your device.",
+          "exportCanceled": "WAV export canceled. Recordings were preserved.",
+          "exportCanceling": "Canceling WAV export…",
           "exportFail": "Could not create WAV. Your takes are preserved.",
+          "exportPreviewTitle": "Preview the exported WAV",
+          "exportPreviewLabel": "Play the exported WAV",
+          "exportPreviewHint": "Loop playback pauses while you preview this file. Confirm the download on your device.",
+          "downloadAgain": "Download WAV again",
+          "exportChanged": "Tracks or export settings changed. Create a new WAV if needed.",
           "memoryNote": "Recordings are temporary and disappear when you close or reload the page. Save anything you want to keep.",
           "trackGain": "Track volume",
           "trackOffset": "Timing offset (milliseconds)",
