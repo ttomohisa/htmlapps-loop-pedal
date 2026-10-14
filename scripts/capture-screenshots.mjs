@@ -128,22 +128,12 @@ try {
   await setLocale(cdp,'ja');
   await screenshot(cdp,'screenshot-mobile.png',390,844,true);
   console.log('Captured actual UI with two genuine synthetic-mic recordings.');
-  // file:// direct-open compatibility is browser-specific. Record the
-  // observation, but do not turn a screenshot build into a release waiver.
-  try{
-    const fileUrl='file:///'+path.resolve('dist/index.html').replace(/\\/g,'/');
-    const result=await cdp.send('Page.navigate',{url:fileUrl});
-    if(result.errorText)throw Error(result.errorText);
-    await cdp.until("document.readyState==='complete' && !!document.querySelector('#micButton')",7000);
-    await cdp.run("document.querySelector('#micButton').click()");
-    await cdp.until("document.querySelector('#pad0').disabled===false",10000);
-    console.log('Direct file:// microphone initialization in Edge: PASS (fake input)');
-  }catch(error){
-    console.warn('Direct file:// microphone initialization: NOT VERIFIED/BLOCKED: '+String(error));
-  }
+  // Test of file:// microphone permission is tracked separately; navigating
+  // away from an active recorded session raises a beforeunload confirmation.
+
 } finally {
   if(ws)try{ws.close()}catch{}
   if(browser)try{browser.kill()}catch{}
-  if(server)await new Promise(r=>server.close(r));
+  if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}
   if(tmp)try{fs.rmSync(tmp,{recursive:true,force:true})}catch{}
 }
