@@ -300,8 +300,8 @@ test('loop phase remains exact after one thousand consecutive turns', () => {
 
 test('completed takes remain exportable while the microphone requires reconnection', () => {
   assert.ok(app[1].includes("$('#downloadButton').disabled = !any || busy || exporting || !engine || processorFailed;"));
-  assert.ok(app[1].includes("if (needsResume) send({type:'interrupt'});"));
-  assert.ok(app[1].includes("if (wasSuspended) await context.suspend();"));
+  assert.ok(app[1].includes("send({type:needsResume ? 'interrupt' : 'pause'});"));
+  assert.ok(app[1].includes("if (wasSuspended && context.state === 'running')"));
   assert.ok(app[1].includes("pendingPad = -1;"));
   assert.ok(app[1].includes("state = hasTakes() ? 'paused' : 'ready';"));
 });
@@ -421,4 +421,162 @@ test('v0.4 UI exposes state-specific SVG and safe recovery affordances', () => {
   assert.match(html,/if \(processorFailed\) \{/);
   assert.match(html,/window\.location\.reload\(\)/);
   assert.match(html,/track\.readyState !== 'live' \|\| track\.muted/);
+});
+
+
+// Extract the exact production WAV functions, rather than testing a reimplementation.
+function appFunction(name, async = false) {
+  const start = app[1].indexOf('      ' + (async ? 'async ' : '') + 'function ' + name + '(');
+  assert.ok(start >= 0, 'Function not found: ' + name);
+  const end = app[1].indexOf('\n      }\n', start);
+  assert.ok(end > start, 'End of function not found: ' + name);
+  return app[1].slice(start,end + '\n      }'.length);
+}
+function loadWavCode() {
+  const code = [
+    appFunction('wavHeader'),appFunction('playbackSample'),
+    appFunction('canceledExportError'),
+    appFunction('encodeWav',true),
+    '({encodeWav,playbackSample,wavHeader})'
+  ].join('\n');
+  return vm.runInNewContext(code,{setTimeout});
+}
+function fakeSnapshot({length=600,rate=1000,takes=[]}={}) {
+  return {length,rate,tracks:Array.from({length:4},(_,i)=>takes[i] || null)};
+}
+function fakeTake(samples,extra={}) {
+  return {pcm:Float32Array.from(samples),gain:1,muted:false,shiftMs:0,...extra};
+}
+function pcmInt16Sample(wav,frame) {
+  return new DataView(wav).getInt16(44+frame*2,true);
+}
+
+test('WAV one-loop output has correct RIFF/PCM headers and exact sample length', async () => {
+  const {encodeWav}=loadWavCode();
+  const rate=1000, length=600;
+  const pcm=new Float32Array(length).fill(.5);
+  const wav=await encodeWav(fakeSnapshot({rate,length,takes:[fakeTake(pcm)]}),'loop',{cancelled:false});
+  const bytes=Buffer.from(wav);
+  assert.equal(bytes.toString('ascii',0,4),'RIFF');
+  assert.equal(bytes.readUInt32LE(4),bytes.length-8);
+  assert.equal(bytes.toString('ascii',8,12),'WAVE');
+  assert.equal(bytes.toString('ascii',12,16),'fmt ');
+  assert.equal(bytes.readUInt16LE(20),1);
+  assert.equal(bytes.readUInt16LE(22),1);
+  assert.equal(bytes.readUInt32LE(24),rate);
+  assert.equal(bytes.readUInt32LE(28),rate*2);
+  assert.equal(bytes.readUInt16LE(32),2);
+  assert.equal(bytes.readUInt16LE(34),16);
+  assert.equal(bytes.toString('ascii',36,40),'data');
+  assert.equal(bytes.readUInt32LE(40),length*2);
+  assert.equal(wav.byteLength,44+length*2);
+  const expected=Math.round(Math.tanh(.5*.7)*32767);
+  assert.ok(Math.abs(pcmInt16Sample(wav,0)-expected)<=1);
+  assert.ok(Math.abs(pcmInt16Sample(wav,length-1)-expected)<=1);
+});
+
+test('WAV export respects mute, gain, timing and seam correction at every frame', async () => {
+  const {encodeWav}=loadWavCode();
+  const rate=1000,length=250;
+  const waveform=new Float32Array(length);
+  waveform[0]=1;waveform[30]=.8;waveform[length-1]=-.5;
+  const a=fakeTake(waveform,{gain:.55,shiftMs:-50});
+  const b=fakeTake(new Float32Array(length).fill(1),{muted:true});
+  const snapshot=fakeSnapshot({rate,length,takes:[a,b]});
+  const wav=await encodeWav(snapshot,'loop',{cancelled:false});
+  const seamStart=length-Math.min(Math.max(2,Math.round(rate*.004)),Math.floor(length/4));
+  const take={...a,seamStart,seamDelta:waveform[0]-waveform[length-1]};
+  const {playbackSample}=loadWavCode();
+  for(let i=0;i<length;i++) {
+    const expected=Math.tanh(playbackSample(take,i,length,rate)*.7);
+    const q=expected<0?Math.round(expected*32768):Math.round(expected*32767);
+    assert.ok(Math.abs(pcmInt16Sample(wav,i)-q)<=1,'Frame '+i);
+  }
+  const original=await encodeWav(fakeSnapshot({rate,length,takes:[b]}),'loop',{cancelled:false});
+  assert.equal(pcmInt16Sample(original,0),0,'Muting must produce silence');
+  assert.equal(waveform[0],1,'Original PCM must not be edited');
+  assert.equal(waveform[length-1],-.5,'Source loop seam must remain unchanged');
+});
+
+test('30 s and 60 s WAV exports have exact durations and end with zero fade', async () => {
+  const {encodeWav}=loadWavCode();
+  const rate=1000,length=400;
+  const take=fakeTake(new Float32Array(length).fill(.7));
+  for(const seconds of [30,60]) {
+    const percentages=[];
+    const wav=await encodeWav(fakeSnapshot({length,rate,takes:[take]}),
+      String(seconds),{cancelled:false},v=>percentages.push(v));
+    assert.equal(wav.byteLength,44+seconds*rate*2);
+    assert.ok(pcmInt16Sample(wav,0)>5000);
+    assert.ok(pcmInt16Sample(wav,seconds*rate-180)>0,'Fade should not be instantaneous');
+    assert.equal(pcmInt16Sample(wav,seconds*rate-1),0);
+    assert.equal(Math.round(percentages.at(-1)),100);
+    assert.ok(percentages.length>1,'Progress callback should report more than completion');
+  }
+});
+
+test('mix limiter keeps 4-loud-track WAV in signed 16-bit range without wraparound',async()=>{
+  const {encodeWav}=loadWavCode();
+  const pcm=new Float32Array(600).fill(1);
+  const snapshot=fakeSnapshot({rate:1000,length:600,takes:
+    [fakeTake(pcm),fakeTake(pcm),fakeTake(pcm),fakeTake(pcm)]});
+  const wav=await encodeWav(snapshot,'loop',{cancelled:false});
+  const peak=pcmInt16Sample(wav,0);
+  assert.ok(peak>0 && peak<=32767,'All-positive input must never wrap negative');
+});
+
+test('export cancellation stops after a processing slice without damaging source tracks',async()=>{
+  const {encodeWav}=loadWavCode();
+  const pcm=new Float32Array(500).fill(.35);
+  const job={cancelled:false};
+  const values=[];
+  await assert.rejects(encodeWav(fakeSnapshot({rate:1000,length:500,takes:[fakeTake(pcm)]}),
+    '60',job,percent=>{values.push(percent);if(percent>5)job.cancelled=true;}),
+    error=>error.name==='AbortError');
+  assert.ok(values.length>=1);
+  assert.equal(pcm[0],Math.fround(.35));
+});
+
+test('malformed WAV snapshots are rejected before allocating or encoding output',async()=>{
+  const {encodeWav}=loadWavCode();
+  await assert.rejects(encodeWav({rate:1000,length:20,tracks:[null,null]},'loop',{cancelled:false}),/Invalid track snapshot/);
+  await assert.rejects(encodeWav(fakeSnapshot({rate:1000,length:200,
+    takes:[fakeTake(new Float32Array(199))]}),'loop',{cancelled:false}),/Invalid track snapshot/);
+  await assert.rejects(encodeWav(fakeSnapshot({rate:0,length:200}), 'loop',{cancelled:false}),/Invalid output size/);
+});
+
+test('generated download stays available via explicit fallback, but becomes stale after a pad edit',()=>{
+  assert.match(html,/<audio id="exportPreviewAudio" controls preload="metadata"/);
+  assert.match(html,/<a class="lp-export-download" id="exportDownloadAgain"/);
+  assert.match(html,/<progress id="exportProgress" max="100"/);
+  assert.match(html,/id="cancelExportButton"/);
+  assert.match(app[1],/URL\.revokeObjectURL\(exportedUrl\)/);
+  assert.match(app[1],/\['adjusted','committed','undone','deleted','cleared'\]\.includes\(message.kind\)/);
+  assert.match(app[1],/exportDuration'\)\.addEventListener\('change',markExportStale\)/);
+  assert.match(app[1],/job\.cancelled = true/);
+});
+
+function normalizedFilenameFor(raw) {
+  const fields = {'#outputFilename':{value:raw}};
+  const code = [appFunction('defaultFilename'), appFunction('normalizedFilename'), 'normalizedFilename()'].join('\n');
+  const answer=vm.runInNewContext(code, {$:selector=>fields[selector]});
+  return {name:answer,input:fields['#outputFilename'].value};
+}
+test('WAV filename handles invalid separators, reserved names, controls and repeats',()=>{
+  const choices=[
+    ['song.wav','song'],
+    ['SONG.wav.wav','SONG'],
+    ['folder/notes','folder-notes'],
+    ['CON.wav','CON-audio'],
+    ['Aux.wav','Aux-audio'],
+    ['CON.txt.wav','CON-audio.txt'],
+    ['my\u202eevil.wav','my-evil'],
+    ['a'.repeat(250),'a'.repeat(110)]
+  ];
+  for(const [raw,expected] of choices) {
+    const x=normalizedFilenameFor(raw);
+    assert.equal(x.name,expected,raw);
+    assert.equal(x.input,expected);
+  }
+  assert.match(normalizedFilenameFor('   ').name,/^loop-pedal-\d{8}-\d{6}$/);
 });
