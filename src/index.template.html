@@ -436,6 +436,10 @@
       .app-confirm-actions { grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
       .app-confirm-button { min-height: 48px; font-size: 14px; }
     }
+    @media (max-width: 767px) {
+      /* Only the decorative footer is hidden on smartphones. */
+      footer { display: none; }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
@@ -530,7 +534,7 @@
         </div>
         <div class="brand-copy">
           <p class="brand-name"><span id="brandName">Loop Pedal</span><span class="version-badge" id="versionBadge">v1.1.0</span></p>
-          <p class="brand-meta" data-i18n="brandMeta">4トラック · 端末内処理</p>
+          <p class="brand-meta" data-i18n="brandMeta">録音・ループ再生・音を重ねる</p>
         </div>
       </div>
       <div class="header-actions">
@@ -551,7 +555,7 @@
       </div>
       <div class="local-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-5"/></svg>
-        <span data-i18n="localBadge">音声を送信しません</span>
+        <span data-i18n="localBadge">完全ローカル処理</span>
       </div>
     </section>
     <!-- APP:BEGIN Loop Pedal -->
@@ -1087,12 +1091,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
 
       const translations = {
         "ja": {
-          "brandMeta": "4トラック · 単一HTML · 端末内処理",
+          "brandMeta": "録音・ループ再生・音を重ねる",
           "helpTitle": "使い方と注意事項",
           "close": "閉じる",
           "introTitle": "音を録って、重ねてみよう",
           "lead": "4つのパッドに音を録り、同じ長さで繰り返し再生。身の回りの音でループを作れます。",
-          "localBadge": "録音内容を送信しません",
+          "localBadge": "完全ローカル処理",
           "workspaceTitle": "ループ録音",
           "workspaceBody": "最初は4拍のカウント後に録音。2つ目からは次のループで録音します。",
           "startMic": "マイクを使って録音",
@@ -1202,12 +1206,12 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "helpOffline": "音声処理に外部サービスは使いません。配布HTMLは単一ファイルですが、マイクや音声処理はブラウザの対応状況に左右されます。"
         },
         "en": {
-          "brandMeta": "4 tracks · Single HTML · Local audio",
+          "brandMeta": "Record · Loop · Layer",
           "helpTitle": "How to use & notes",
           "close": "Close",
           "introTitle": "Record sounds. Build a loop.",
           "lead": "Record sounds on four pads and play them back in a repeating loop, all in your browser.",
-          "localBadge": "Audio is not uploaded",
+          "localBadge": "Fully local processing",
           "workspaceTitle": "Loop recording",
           "workspaceBody": "The first take starts after four count-in beats. Further takes start at the next loop boundary.",
           "startMic": "Enable microphone",
@@ -1457,7 +1461,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
         document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
         document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
-        $('#languageButton').textContent = language === 'ja' ? 'EN' : '日本語';
+        $('#languageButton').textContent = language === 'ja' ? 'EN' : 'JA';
         $('#languageButton').setAttribute('aria-label', language === 'ja' ? '英語に切り替え' : 'Switch to Japanese');
         document.title = language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#brandName').textContent = language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
@@ -1873,7 +1877,47 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         applyLanguage();
       });
       const helpDialog=$('#helpDialog');
-      $('#helpButton').addEventListener('click',()=>helpDialog.showModal());
+      let helpScrollLock = null;
+      function lockHelpBackground() {
+        if (helpScrollLock) return;
+        const root = document.documentElement;
+        const body = document.body;
+        const y = window.scrollY;
+        helpScrollLock = {
+          y, htmlOverflow: root.style.overflow, htmlScrollBehavior: root.style.scrollBehavior,
+          position: body.style.position, top: body.style.top,
+          left: body.style.left, right: body.style.right, width: body.style.width
+        };
+        // iOS Safari can still scroll behind a modal unless the body is fixed.
+        root.style.overflow = 'hidden';
+        body.style.position = 'fixed';
+        body.style.top = '-' + y + 'px';
+        body.style.left = '0';
+        body.style.right = '0';
+        body.style.width = '100%';
+      }
+      function unlockHelpBackground() {
+        const lock = helpScrollLock;
+        if (!lock) return;
+        helpScrollLock = null;
+        const root = document.documentElement;
+        const body = document.body;
+        body.style.position = lock.position;
+        body.style.top = lock.top;
+        body.style.left = lock.left;
+        body.style.right = lock.right;
+        body.style.width = lock.width;
+        root.style.overflow = lock.htmlOverflow;
+        root.style.scrollBehavior = 'auto';
+        window.scrollTo(0, lock.y);
+        root.style.scrollBehavior = lock.htmlScrollBehavior;
+      }
+      $('#helpButton').addEventListener('click',()=>{
+        if (helpDialog.open) return;
+        helpDialog.showModal();
+        lockHelpBackground();
+      });
+      helpDialog.addEventListener('close',unlockHelpBackground);
       $('#closeHelpButton').addEventListener('click',()=>helpDialog.close());
       helpDialog.addEventListener('click',event=>{
         const rect=helpDialog.getBoundingClientRect();
