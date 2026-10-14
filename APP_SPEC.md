@@ -1,12 +1,12 @@
 # Loop Pedal — APP_SPEC.md
 
-> **Status:** Draft for implementation / 企画確定案（未実装・実機検証前）  
+> **Status:** Development preview v0.2.0（実機検証・v1.0.0受け入れ未完了）  
 > **Document version:** 0.1.0 / **Created:** 2026-10-14  
 > **Target product:** Loop Pedal（仮称） / **Target release:** v1.0.0  
 > **Related:** [`ACCEPTANCE_MATRIX.md`](ACCEPTANCE_MATRIX.md)  
 > **Project:** Browser Kitty / **Brand primary:** `#16624F`
 
-この文書は Loop Pedal の実装・レビュー・受け入れ判定に使う製品仕様の正とする。実装時は、その時点の `ttomohisa/htmlapps-template` の `AGENTS.md`、ビルド構成、共通部品を改めて確認する。記載した数値のうち「目標」は検証前の設計値であり、実機で達成済みという意味ではない。リポジトリ名・URL・公開状態は未確定である。
+この文書は Loop Pedal の実装・レビュー・受け入れ判定に使う製品仕様の正とする。実装時は、その時点の `ttomohisa/htmlapps-template` の `AGENTS.md`、ビルド構成、共通部品を改めて確認する。記載した数値のうち「目標」は検証前の設計値であり、実機で達成済みという意味ではない。実装リポジトリは https://github.com/ttomohisa/htmlapps-loop-pedal （Public）。実装状況はリポジトリとCHANGELOGを参照する。
 
 ---
 
