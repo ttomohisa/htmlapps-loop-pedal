@@ -4,6 +4,16 @@
 
 - Pending physical-device timing and microphone interruption verification, Japanese/English screenshots, and release gating.
 
+## 0.3.0 - Mobile capture quality and UI development preview - 2026-10-14
+
+- Locked background scroll while Help is open and restored the scroll position on close, including iOS-style body locking.
+- Updated the Japanese badge to 「完全ローカル処理」, used an application-purpose subtitle, changed the language switch to 「JA」, and hid the footer on smartphones.
+- Added non-destructive ~4 ms loop-edge smoothing, preserving the source's first sample and applying the same correction to real-time playback and WAV export.
+- Added 5 ms timing adjustment buttons and browser-provided audio diagnostics with an explicit input-latency limitation.
+- Ignored events from replaced microphone streams, and suspended safely when an active microphone is muted/ended.
+- Extended deterministic engine tests for seam handling, timing/export consistency, interruptions, and 1,000-loop stability.
+- **Gate pending:** real iPhone/Android recording, latency measurements, audio quality listening tests, `file://` compatibility, screenshots.
+
 ## 0.2.0 - Audio engine and four-pad development preview - 2026-10-14
 
 - Initialized Loop Pedal from the current Browser Kitty single-HTML template.

@@ -33,6 +33,26 @@ workflow, if credentials are configured. On Android Chrome and iPhone Safari:
 - Record samples / devices / audio routes / measured compensation separately.
 - Check CSP and runtime requests after the initial HTML has loaded.
 
+## v0.3.0 smartphone regression checks
+
+- Scroll halfway down, open “使い方と注意事項”, then try scrolling behind
+  it with both touch and wheel. Only the help body should move.
+  Close with the button, Escape, and by touching the backdrop; confirm the
+  page returns to its previous scroll position.
+- At narrow smartphone widths confirm the footer is hidden, the privacy badge
+  reads 「完全ローカル処理」, the header subtitle describes recording/looping,
+  and the English-to-Japanese switch reads **JA**.
+- Try the ±5 ms timing buttons and the 0 ms reset on a committed track.
+  WAV export and audio playback must respond to the same adjusted position.
+- Record loud short attacks near the beginning and end of a loop. Inspect the
+  seam with signal analysis and listen for noise/pumping before accepting the
+  four-millisecond correction. Source PCM and downbeat sample must be unchanged.
+- Audio diagnostics may report browser output latency. It must **not** describe
+  that number as measured microphone latency or detect headphone connection.
+- Change audio device or unplug a mic while a take is recording. No incomplete
+  take should replace a previous completed take; stale events must not stop
+  newly connected audio streams.
+
 ## Latency, acoustic output and limitations
 
 `connect-src 'none'` prevents normal runtime connections, but does not prove
