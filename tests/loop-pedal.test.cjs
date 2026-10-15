@@ -673,7 +673,7 @@ test('regression: steady-state live mix and WAV differ only by 16-bit quantizati
     const seamStart=N-Math.min(processor.seamSamples,Math.floor(N/4));
     const seamDelta=Math.abs(pcm[0]-pcm[N-1])<0.02?0:pcm[0]-pcm[N-1];
     return {pcm,gain,shiftMs,shift,targetShift:shift,shiftFade:0,
-      smooth:gain,muted,seamStart,seamDelta};
+      smooth:muted?0:gain,muted,seamStart,seamDelta};
   }
   processor.tracks=[
     take(20,.45,.75,-25,false),take(12,.3,1,50,false),
