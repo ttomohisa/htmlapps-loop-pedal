@@ -1,0 +1,62 @@
+name: Capture Loop Pedal screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/loop-pedal-audio-prototype
+    paths:
+      - app.config.json
+      - scripts/capture-screenshots.mjs
+      - .github/workflows/capture-screenshots.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: loop-pedal-screenshots-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    if: github.repository == 'ttomohisa/htmlapps-loop-pedal'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Validate PowerShell syntax
+        shell: powershell
+        run: .\scripts\check-powershell-syntax.ps1
+
+      - name: Build verified standalone app
+        shell: pwsh
+        run: ./scripts/check-repository.ps1
+
+      - name: Capture real browser screenshots using test microphone
+        shell: pwsh
+        run: node scripts/capture-screenshots.mjs
+
+      - name: Commit updated screenshots to source branch
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/screenshot.png assets/screenshot-en.png assets/screenshot-mobile.png
+          $changed = git diff --cached --name-only
+          if (-not $changed) {
+            Write-Host "Screenshots unchanged."
+            exit 0
+          }
+          git commit -m "docs: update real Loop Pedal desktop and mobile screenshots"
+          if ($LASTEXITCODE -ne 0) { throw "Screenshot commit failed" }
+          git push origin "HEAD:${{ github.ref_name }}"
+          if ($LASTEXITCODE -ne 0) { throw "Screenshot push failed" }

@@ -1,15 +1,15 @@
 {
   "$schema": "./schemas/app-config.schema.json",
-  "name": "Single HTML App Starter",
-  "nameJa": "単一HTMLアプリ スターター",
-  "slug": "single-html-app-starter",
-  "version": "1.3.0",
-  "description": "A reusable starter for privacy-friendly, fully self-contained browser apps.",
-  "descriptionJa": "プライバシーに配慮した完全内包型ブラウザーアプリの再利用テンプレートです。",
+  "name": "Loop Pedal",
+  "nameJa": "Loop Pedal / ループペダル",
+  "slug": "loop-pedal",
+  "version": "1.0.0-rc.2",
+  "description": "Record up to four sounds, loop them in time, layer them together, and export the result as audio.",
+  "descriptionJa": "身の回りの音を4トラックに録音し、同じ長さで繰り返しながら重ね、音声として保存します。",
   "defaultLanguage": "auto",
   "repository": {
-    "owner": "OWNER",
-    "name": "single-html-app-template"
+    "owner": "ttomohisa",
+    "name": "htmlapps-loop-pedal"
   },
   "build": {
     "output": "dist/index.html",

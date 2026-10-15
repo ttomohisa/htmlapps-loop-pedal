@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#f5f5f2">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Single HTML App Starter</title>
+  <title>Loop Pedal</title>
   <link rel="icon" href="__APP_ICON_DATA_URI__">
   <style>
     :root {
@@ -436,9 +436,115 @@
       .app-confirm-actions { grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
       .app-confirm-button { min-height: 48px; font-size: 14px; }
     }
+    @media (max-width: 767px) {
+      /* Only the decorative footer is hidden on smartphones. */
+      footer { display: none; }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
+  
+    /* APP:STYLE:BEGIN -- Loop Pedal application */
+    .lp-workspace {display:grid; gap:16px; max-width:780px; margin-inline:auto;}
+    .lp-intro {margin:0 0 2px;color:var(--muted);font-size:14px;}
+    .lp-settings {display:flex;flex-wrap:wrap;align-items:end;gap:10px 14px;padding:14px;background:var(--surface-muted);border-radius:12px;}
+    .lp-field {display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:650;}
+    .lp-field input,.lp-field select,.lp-input {min-width:0;min-height:44px;border:1px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--text);padding:8px 12px;font-size:15px;}
+    .lp-field input {width:96px;}
+    .lp-field select {min-width:102px;}
+    .lp-field.wide {flex:1 1 180px;}
+    .lp-field.wide select {width:100%;}
+    .lp-settings-note {width:100%;font-size:12px;color:var(--muted);margin:0;}
+    .lp-record-info {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+    .lp-audio-check {box-shadow:none;border-color:var(--line);background:var(--surface);}
+    .lp-audio-check summary {padding:13px 15px;font-size:13px;}
+    .lp-audio-detail {display:grid;gap:10px;padding:0 15px 16px;}
+    .lp-audio-detail p {margin:0;color:var(--muted);font-size:12px;line-height:1.65;}
+    .lp-audio-data {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;font-size:12px;}
+    .lp-audio-data dt {color:var(--muted);overflow-wrap:anywhere;}
+    .lp-audio-data dd {margin:0;font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere;}
+    .lp-shift-actions {display:flex;flex-wrap:wrap;gap:8px;}
+    .lp-shift-actions button {min-width:48px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:pointer;}
+    .lp-shift-actions button:focus-visible {outline:3px solid var(--focus);outline-offset:2px;}
+    .lp-status {font-size:13px;line-height:1.55;font-weight:700;color:var(--accent);min-height:21px;}
+    .lp-status.error {color:var(--danger);}
+    .lp-sample-info {font-size:12px;color:var(--muted);}
+    .lp-pad-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .lp-pad-wrap {position:relative;min-width:0;}
+    .lp-pad {display:flex; flex-direction:column;align-items:flex-start;justify-content:space-between;gap:10px;width:100%;min-height:158px;
+      padding:16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);
+      text-align:left;cursor:pointer; transition:background .13s,border-color .13s; }
+    .lp-pad:hover {border-color:var(--accent);}
+    .lp-pad:disabled {opacity:.62;cursor:not-allowed;}
+    .lp-pad.has-take {border-color:var(--accent);background:var(--accent-soft);}
+    .lp-pad.is-muted {border-style:dashed;background:var(--surface-muted);}
+    .lp-pad.is-queued {border-color:#a97724;background:#fff6df;}
+    .lp-pad.is-recording {border-color:var(--danger);background:#fff0ee;}
+    .lp-pad.is-recording .lp-pad-mark {color:var(--danger);}
+    .lp-pad-heading {font-size:13px;font-weight:760;color:var(--muted);}
+    .lp-pad-mark {width:27px;height:27px;color:var(--accent);}
+    .lp-pad-status {font-size:15px;font-weight:800;line-height:1.3;max-width:100%;overflow-wrap:anywhere;}
+    .lp-pad-sub {font-size:11px;color:var(--muted);font-weight:500;}
+    .lp-pad-menu {position:absolute;top:9px;right:9px;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:12px;background:transparent;cursor:pointer;}
+    .lp-pad-menu svg {width:21px;height:21px;}
+    .lp-pad-menu:hover {background:rgba(22,98,79,.13);}
+    .lp-pad-menu[hidden] {display:none;}
+    .lp-beats {display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px;max-width:440px;}
+    .lp-beats span {height:11px;border-radius:20px;background:var(--line);}
+    .lp-beats span.active {background:var(--accent);}
+    .lp-beats span.recording {background:var(--danger);}
+    .lp-meter {display:grid;gap:8px;padding:14px;border-radius:12px;background:var(--surface-muted);}
+    .lp-meter-head {display:flex;gap:8px;justify-content:space-between;align-items:center;font-size:13px;}
+    .lp-actions {display:flex;flex-wrap:wrap;gap:8px;}
+    .lp-actions .button {min-height:44px;}
+    .lp-actions .button:disabled,.lp-export .button:disabled {opacity:.5;cursor:not-allowed;}
+    .lp-export {display:grid;gap:12px;padding:15px;border:1px solid var(--line);border-radius:12px;background:var(--surface);}
+    .lp-export-head {display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .lp-export-row {display:flex;align-items:end;gap:10px;flex-wrap:wrap;}
+    .lp-export-row .lp-field:first-child {flex:1 1 175px;}
+    .lp-filename {display:flex;align-items:center;gap:0;}
+    .lp-filename input {width:100%;min-width:0;border-radius:9px 0 0 9px;}
+    .lp-filename span {padding:11px;background:var(--surface-muted);border:1px solid var(--line-strong);border-left:0;border-radius:0 9px 9px 0;color:var(--muted);font-size:13px;}
+    .lp-export-result {min-height:20px;color:var(--muted);font-size:12px;overflow-wrap:anywhere;}
+    .lp-export-commands {display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .lp-export-commands .button {min-height:44px;padding:9px 13px;}
+    .lp-export-progress {display:grid;gap:5px;}
+    .lp-export-progress[hidden],.lp-export-preview[hidden],#cancelExportButton[hidden] {display:none !important;}
+    .lp-export-progress progress {width:100%;height:10px;accent-color:var(--accent);}
+    .lp-export-progress span {font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+    .lp-export-preview {display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px;}
+    .lp-export-preview audio {display:block;width:100%;max-width:100%;min-width:0;}
+    .lp-export-download {display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 14px;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:750;}
+    .lp-export-download:hover {background:var(--accent-hover);}
+    .lp-export-download:focus-visible {outline:3px solid var(--focus);outline-offset:2px;}
+    .lp-export-preview p {margin:0;color:var(--muted);font-size:12px;line-height:1.6;}
+    .lp-dialog {width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 24px);border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--text);padding:0;box-shadow:var(--shadow-md);}
+    .lp-dialog::backdrop {background:rgba(0,0,0,.45);}
+    @media (max-width:520px) { .lp-dialog {max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));} .lp-dialog-inner {padding-bottom:calc(18px + env(safe-area-inset-bottom));} }
+    .lp-dialog-inner {display:grid;gap:14px;padding:18px;max-height:calc(100dvh - 24px);overflow:auto;}
+    .lp-dialog-head {display:flex;align-items:center;justify-content:space-between;gap:16px;}
+    .lp-dialog-head h2 {margin:0;font-size:18px;}
+    .lp-dialog-close {width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;}
+    .lp-dialog-note {color:var(--muted);font-size:12px;margin:0;}
+    .lp-dialog .lp-field input[type=range] {width:100%;border:0;padding:5px 0;}
+    .lp-dialog-row {display:flex;gap:9px;flex-wrap:wrap;}
+    .lp-dialog-row .button {min-height:44px;}
+    .lp-label {font-weight:720;font-size:13px;}
+    .lp-warning {margin:0;color:var(--muted);font-size:13px;}
+    @media(max-width:520px) {
+      .lp-workspace {gap:13px;}
+      .lp-settings {padding:11px;gap:8px;}
+      .lp-field.wide {flex:1 1 100%;}
+      .lp-pad-grid {gap:9px;}
+      .lp-pad {min-height:143px;padding:13px;}
+      .lp-pad-menu {top:4px;right:4px;}
+      .lp-pad-heading {font-size:12px;}
+      .lp-pad-status {font-size:14px;}
+      .lp-actions .button {flex:1 1 auto;}
+      .lp-export-row .lp-field {flex:1 1 100%;}
+    }
+    /* APP:STYLE:END */
+
   </style>
 </head>
 <body>
@@ -449,8 +555,8 @@
           <img id="appBrandIcon" src="__APP_ICON_DATA_URI__" alt="">
         </div>
         <div class="brand-copy">
-          <p class="brand-name"><span id="brandName">Single HTML App Starter</span><span class="version-badge" id="versionBadge">v1.1.0</span></p>
-          <p class="brand-meta" data-i18n="brandMeta">Single file · Local-first · GitHub Pages</p>
+          <p class="brand-name"><span id="brandName">Loop Pedal</span><span class="version-badge" id="versionBadge">v1.0.0-rc.1</span></p>
+          <p class="brand-meta" data-i18n="brandMeta">録音・ループ再生・音を重ねる</p>
         </div>
       </div>
       <div class="header-actions">
@@ -462,83 +568,170 @@
     </div>
   </header>
 
+
   <main class="main">
     <section class="page-intro" aria-labelledby="heroTitle">
       <div>
-        <h2 id="heroTitle" data-i18n="introTitle">単一HTMLアプリのスターター</h2>
-        <p data-i18n="lead">PDF Organizerと同じ、固定依存・完全内包・実行時通信なしの構成から、新しいブラウザーアプリを作れます。</p>
+        <h2 id="heroTitle" data-i18n="introTitle">音を録って、重ねてみよう</h2>
+        <p data-i18n="lead">4つのパッドに録った音を、同じ長さで繰り返し再生します。</p>
       </div>
       <div class="local-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-5"/></svg>
-        <span data-i18n="localBadge">実行時通信なし</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-5"/></svg>
+        <span data-i18n="localBadge">完全ローカル処理</span>
       </div>
     </section>
-
-    <!-- APP:BEGIN Replace this demo workspace with the real application. -->
-    <section class="shell workspace" aria-labelledby="workspaceTitle">
-      <div class="workspace-head">
+    <!-- APP:BEGIN Loop Pedal -->
+    <section class="shell workspace lp-workspace" aria-labelledby="workspaceTitle">
+      <div class="lp-record-info">
         <div>
-          <h2 id="workspaceTitle" data-i18n="workspaceTitle">Starter workspace</h2>
-          <p data-i18n="workspaceBody">Text stays in this browser. It is never sent by this app.</p>
+          <h2 id="workspaceTitle" data-i18n="workspaceTitle">ループ録音</h2>
+          <p class="lp-intro" data-i18n="workspaceBody">最初は4拍のカウント後に録音。2つ目からは次のループで録音します。</p>
         </div>
-        <div class="stats" aria-live="polite">
-          <div class="stat"><span class="stat-value" id="characterCount">0</span><span class="stat-label" data-i18n="characters">Characters</span></div>
-          <div class="stat"><span class="stat-value" id="wordCount">0</span><span class="stat-label" data-i18n="words">Words</span></div>
-          <div class="stat"><span class="stat-value" id="lineCount">0</span><span class="stat-label" data-i18n="lines">Lines</span></div>
+        <button class="button primary" id="micButton" type="button" data-i18n="startMic">マイクを使って録音</button>
+      </div>
+      <div class="lp-settings" aria-label="録音設定">
+        <label class="lp-field"><span data-i18n="bpm">テンポ (BPM)</span><input id="bpmInput" type="number" min="40" max="200" step="1" inputmode="numeric" value="100"></label>
+        <label class="lp-field"><span data-i18n="bars">小節数</span><select id="barsSelect"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option></select></label>
+        <label class="lp-field wide"><span data-i18n="recordingMode">録音方式</span><select id="modeSelect">
+          <option value="speaker" data-i18n="modeSpeaker">スマホだけで録音（録音中は無音）</option>
+          <option value="headphones" data-i18n="modeHeadphones">イヤホンで重ね録り</option>
+        </select></label>
+        <p class="lp-settings-note" id="modeNote" data-i18n="modeNoteSpeaker">録音中はほかの音が聞こえません。音を聴きながら重ねる場合はイヤホン方式にしてください。</p>
+      </div>
+      <div class="lp-record-info">
+        <div class="lp-status" id="engineStatus" role="status" aria-live="polite">録音を始めるにはマイクを準備してください。</div>
+        <span class="lp-sample-info" id="sampleInfo" aria-live="off">100 BPM · 2小節</span>
+      </div>
+      <div class="lp-pad-grid" id="padGrid">
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad0" type="button" data-pad="0" disabled aria-describedby="padSub0">
+          <span class="lp-pad-heading" id="padName0">音 1</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus0">録音する</span>
+          <span class="lp-pad-sub" id="padSub0">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu0" data-manage="0" hidden aria-label="音 1 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div>
+
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad1" type="button" data-pad="1" disabled aria-describedby="padSub1">
+          <span class="lp-pad-heading" id="padName1">音 2</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus1">録音する</span>
+          <span class="lp-pad-sub" id="padSub1">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu1" data-manage="1" hidden aria-label="音 2 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div>
+
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad2" type="button" data-pad="2" disabled aria-describedby="padSub2">
+          <span class="lp-pad-heading" id="padName2">音 3</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus2">録音する</span>
+          <span class="lp-pad-sub" id="padSub2">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu2" data-manage="2" hidden aria-label="音 3 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div>
+
+      <div class="lp-pad-wrap">
+        <button class="lp-pad" id="pad3" type="button" data-pad="3" disabled aria-describedby="padSub3">
+          <span class="lp-pad-heading" id="padName3">音 4</span>
+          <svg class="lp-pad-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          <span class="lp-pad-status" id="padStatus3">録音する</span>
+          <span class="lp-pad-sub" id="padSub3">タップして録音</span>
+        </button>
+        <button class="lp-pad-menu" id="padMenu3" data-manage="3" hidden aria-label="音 4 の設定" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      </div></div>
+      <div class="lp-meter" aria-label="拍と小節">
+        <div class="lp-meter-head"><strong id="beatLabel" aria-live="off">準備中</strong><span id="progressLabel">—</span></div>
+        <div class="lp-beats" id="beatMarkers" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
       </div>
-      <label class="sr-only" for="editor" data-i18n="editorLabel">Text editor</label>
-      <textarea id="editor" spellcheck="true"></textarea>
-      <div class="export-row">
-        <label class="export-field" for="outputFilename">
-          <span class="export-label" data-i18n="outputFilename">出力ファイル名</span>
-          <span class="filename-control">
-            <input class="filename-input" id="outputFilename" type="text" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="outputFilenameHint">
-            <span class="filename-extension" aria-hidden="true">.txt</span>
-          </span>
-          <span class="sr-only" id="outputFilenameHint" data-i18n="outputFilenameHint">拡張子は自動で .txt が付きます</span>
-        </label>
-      </div>
-      <div class="toolbar">
-        <div class="button-row">
-          <button class="button primary" id="copyButton" type="button" data-i18n="copy">Copy</button>
-          <button class="button" id="downloadButton" type="button" data-i18n="download">Download text</button>
-          <button class="button" id="sampleButton" type="button" data-i18n="sample">Restore sample</button>
+      <details class="lp-audio-check" id="audioDiagnostics">
+        <summary data-i18n="audioDiagnostics">録音のずれ・音質を確認</summary>
+        <div class="lp-audio-detail">
+          <p data-i18n="audioDiagnosticsLead">音がずれたら、録音済みパッドの設定で再生位置を前後に調整できます。</p>
+          <dl class="lp-audio-data">
+            <dt data-i18n="audioDiagSampleRate">音声処理の周波数</dt><dd id="audioDiagRate">—</dd>
+            <dt data-i18n="audioDiagProcessing">マイクの自動補正</dt><dd id="audioDiagProcessing">—</dd>
+            <dt data-i18n="audioDiagOutput">再生側の遅延の目安</dt><dd id="audioDiagOutput">—</dd>
+          </dl>
+          <p data-i18n="audioDiagnosticsLimit">これらはブラウザから取得できる範囲の情報です。マイク入力の遅延や実際のイヤホン接続を測定・判定するものではありません。</p>
         </div>
-        <div class="button-row">
-          <button class="button danger" id="clearButton" type="button" data-i18n="clear">Clear</button>
-        </div>
-        <span class="save-status" id="saveStatus" data-i18n="savedLocally">Saved locally</span>
+      </details>
+      <div class="lp-actions">
+        <button class="button" id="pauseButton" type="button" disabled data-i18n="pause">一時停止</button>
+        <button class="button danger" id="abortButton" type="button" disabled data-i18n="abort">録音を中止</button>
+        <button class="button" id="undoButton" type="button" disabled data-i18n="undoRecord">最後の録音を取り消す</button>
+        <button class="button" id="resetButton" type="button" disabled data-i18n="newLoop">新しいループを作る</button>
       </div>
+      <section class="lp-export" aria-label="音声保存">
+        <div class="lp-export-head"><h3 class="section-title" data-i18n="exportTitle">音声を保存</h3><span class="lp-sample-info">PCM WAV · 16-bit · mono</span></div>
+        <div class="lp-export-row">
+          <label class="lp-field" for="outputFilename"><span data-i18n="outputFilename">ファイル名</span>
+            <span class="lp-filename"><input id="outputFilename" class="lp-input" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="filenameNote"><span>.wav</span></span>
+          </label>
+          <label class="lp-field" for="exportDuration"><span data-i18n="duration">長さ</span>
+            <select id="exportDuration"><option value="loop" data-i18n="durationLoop">ループ1回</option><option value="30" data-i18n="duration30">30秒</option><option value="60" data-i18n="duration60">60秒</option></select>
+          </label>
+          <div class="lp-export-commands">
+            <button class="button primary" id="downloadButton" type="button" disabled data-i18n="downloadWav">WAVを保存</button>
+            <button class="button" id="cancelExportButton" type="button" hidden data-i18n="cancelExport">書き出しを中止</button>
+          </div>
+        </div>
+        <span class="sr-only" id="filenameNote" data-i18n="filenameHint">拡張子 .wav は自動で付きます</span>
+        <div class="lp-export-progress" id="exportProgressWrap" hidden>
+          <progress id="exportProgress" max="100" aria-label="WAV変換の進捗" data-i18n-aria-label="exportProgressLabel"></progress>
+          <span id="exportProgressText" aria-hidden="true"></span>
+        </div>
+        <div class="lp-export-result" id="exportResult" role="status" aria-live="polite"></div>
+        <div class="lp-export-preview" id="exportPreviewBlock" hidden>
+          <strong data-i18n="exportPreviewTitle">作成したWAVを確認</strong>
+          <audio id="exportPreviewAudio" controls preload="metadata" aria-label="作成したWAVの試聴" data-i18n-aria-label="exportPreviewLabel"></audio>
+          <p data-i18n="exportPreviewHint">試聴を始めるとループ再生は一時停止します。ファイルの保存は端末側で確認してください。</p>
+          <a class="lp-export-download" id="exportDownloadAgain" href="#" download data-i18n="downloadAgain">もう一度WAVを保存</a>
+        </div>
+      </section>
+      <p class="lp-warning" data-i18n="memoryNote">録音は一時的なものです。ページを閉じると消えます。必要な音声は保存してください。</p>
     </section>
     <!-- APP:END -->
-
-    <section class="shell section" aria-labelledby="guaranteesTitle">
-      <div class="section-head">
-        <h2 class="section-title" id="guaranteesTitle" data-i18n="guaranteesTitle">Template guarantees</h2>
-        <p data-i18n="guaranteesBody">Keep these constraints unless the product specification explicitly changes them.</p>
-      </div>
-      <div class="card-grid">
-        <article class="card"><div class="card-number">01</div><h3 data-i18n="card1Title">One deliverable</h3><p data-i18n="card1Body">The release artifact is dist/index.html. It opens directly and can be hosted as a static page.</p></article>
-        <article class="card"><div class="card-number">02</div><h3 data-i18n="card2Title">Pinned dependencies</h3><p data-i18n="card2Body">Third-party npm assets are version-pinned, hashed, and embedded during the build.</p></article>
-        <article class="card"><div class="card-number">03</div><h3 data-i18n="card3Title">No runtime network</h3><p data-i18n="card3Body">Content Security Policy blocks runtime connections. User data stays inside the page.</p></article>
-        <article class="card"><div class="card-number">04</div><h3 data-i18n="card4Title">LLM-ready workflow</h3><p data-i18n="card4Body">AGENTS.md and APP_SPEC.md give coding agents a stable contract, acceptance criteria, and handoff format.</p></article>
-      </div>
-    </section>
-
     <section class="shell section">
       <details>
-        <summary data-i18n="buildInfo">Build information</summary>
+        <summary data-i18n="buildInfo">ビルド情報</summary>
         <div class="build-grid">
-          <div class="build-item"><span data-i18n="appVersion">App version</span><strong id="buildVersion">—</strong></div>
-          <div class="build-item"><span data-i18n="builtAt">Built at</span><strong id="builtAt">—</strong></div>
-          <div class="build-item"><span data-i18n="dependencies">Embedded dependencies</span><strong id="dependencyCount">0</strong></div>
+          <div class="build-item"><span data-i18n="appVersion">アプリバージョン</span><strong id="buildVersion">—</strong></div>
+          <div class="build-item"><span data-i18n="builtAt">生成日時</span><strong id="builtAt">—</strong></div>
+          <div class="build-item"><span data-i18n="dependencies">内包依存数</span><strong id="dependencyCount">0</strong></div>
         </div>
       </details>
     </section>
   </main>
+  <dialog class="lp-dialog" id="trackDialog" aria-labelledby="trackDialogTitle">
+    <div class="lp-dialog-inner">
+      <div class="lp-dialog-head"><h2 id="trackDialogTitle">音 1 の設定</h2>
+        <button type="button" class="lp-dialog-close" id="closeTrackDialog" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <label class="lp-field"><span data-i18n="trackGain">音量</span><input id="gainInput" type="range" min="0" max="100" step="1" value="100"></label>
+      <output id="gainValue">100%</output>
+      <label class="lp-field"><span data-i18n="trackOffset">録音位置を調整（ミリ秒）</span><input id="shiftInput" type="range" min="-200" max="200" step="5" value="0"></label>
+      <output id="shiftValue">0 ms</output>
+      <div class="lp-shift-actions">
+        <button type="button" id="shiftEarlier" data-i18n-aria-label="shiftEarlier" data-i18n="shiftEarlier">5 ms早める</button>
+        <button type="button" id="shiftReset" data-i18n="shiftReset">0 msに戻す</button>
+        <button type="button" id="shiftLater" data-i18n-aria-label="shiftLater" data-i18n="shiftLater">5 ms遅らせる</button>
+      </div>
+      <p class="lp-dialog-note" data-i18n="offsetHelp">マイナスで早く、プラスで遅く鳴ります。元の音声は変わりません。</p>
+      <div class="lp-dialog-row">
+        <button type="button" class="button primary" id="rerecordButton" data-i18n="rerecord">録り直す</button>
+        <button type="button" class="button danger" id="deleteTrackButton" data-i18n="deleteTrack">この音を消す</button>
+      </div>
+    </div>
+  </dialog>
 
-  <footer><span id="footerName">Single HTML App Starter</span> · MIT License · <span data-i18n="footer">Generated as one self-contained HTML file</span></footer>
+  <footer><span id="footerName">Loop Pedal</span> · MIT License · <span data-i18n="footer">Generated as one self-contained HTML file</span></footer>
   <div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" data-tone="default">
     <span class="app-toast-message" id="appToastMessage"></span>
     <button class="app-toast-action" id="appToastAction" type="button" hidden></button>
@@ -569,27 +762,304 @@
       </button>
     </div>
     <div class="dialog-body">
-      <!-- APP:HELP:BEGIN Update this section together with the real application. -->
+
+      <!-- APP:HELP:BEGIN Loop Pedal user guide -->
       <h3 data-i18n="helpBasicsTitle">基本操作</h3>
       <ol>
-        <li data-i18n="helpStep1">作業領域へテキストを入力します。内容は入力のたびに端末内へ保存されます。</li>
-        <li data-i18n="helpStep2">出力ファイル名を必要に応じて変更し、「コピー」または「テキスト保存」で入力内容を取り出せます。</li>
-        <li data-i18n="helpStep3">「サンプルに戻す」や「消去」の直後は、トーストの「元に戻す」から取り消せます。</li>
+        <li data-i18n="helpStep1">「マイクを使って録音」を選び、端末からマイクの許可を求められたら許可します。</li>
+        <li data-i18n="helpStep2">空のパッドを押します。4拍カウント後に録音し、設定した小節数で自動終了します。</li>
+        <li data-i18n="helpStep3">次の空パッドを押すと、次のループ先頭から自動録音。録音済みパッドを押すとミュートできます。</li>
+        <li data-i18n="helpStep4">パッド右上の設定から録り直し・音量・位置の調整ができます。WAVで保存できます。</li>
       </ol>
-
+      <h3 data-i18n="helpModeTitle">録音方式</h3>
+      <p data-i18n="helpModeBody">「スマホだけで録音」では、録音中に既存ループやクリック音は鳴りません。音を聴きながら重ねる場合は「イヤホンで重ね録り」を選んでください。有線イヤホンを推奨します。Bluetoothは録音位置がずれる場合があります。</p>
       <h3 data-i18n="helpPrivacyTitle">プライバシー</h3>
-      <p data-i18n="helpPrivacyBody">入力内容と操作はブラウザー内で処理され、このアプリから外部へ送信されません。必要なコードと依存ファイルも配布用HTMLに内包されます。</p>
-
+      <p data-i18n="helpPrivacyBody">録音した音はブラウザ内で処理し、このアプリから外部へ送信しません。マイクの許可は録音の準備操作後にのみ求めます。</p>
       <h3 data-i18n="helpNotesTitle">注意事項</h3>
       <ul>
-        <li data-i18n="helpNoteStorage">ブラウザーのサイトデータを削除すると、端末内に保存した入力内容も消える場合があります。必要な内容はファイルとして保存してください。</li>
-        <li data-i18n="helpNoteBrowser">一部の機能はブラウザーの制限や端末性能の影響を受けます。重要な成果物は保存後に内容を確認してください。</li>
-        <li data-i18n="helpNoteTemplate">この画面はスターターの例です。新しいアプリを作る際は、機能と一緒にこのヘルプも実際の操作へ書き換えます。</li>
+        <li data-i18n="helpNoteStorage">録音はメモリにのみ保持します。ページの更新・終了で消えます。必要な音声はWAVで保存してください。</li>
+        <li data-i18n="helpNoteBrowser">画面ロック、着信、タブ切り替え、マイクの切断で録音が止まる場合があります。復帰後は明示的に再開してください。</li>
+        <li data-i18n="helpNoteLatency">端末や接続方式による録音遅延は完全には自動補正できません。パッドで位置を調整してください。ループの境目では短い音量調整を行うため、素材によって聞こえ方が変わることがあります。</li>
       </ul>
-      <p class="dialog-note" data-i18n="helpOffline">配布物は dist/index.html ひとつです。ローカルで直接開くことも、GitHub Pagesで公開することもできます。</p>
+      <p class="dialog-note" data-i18n="helpOffline">音声処理に外部サービスは使いません。配布HTMLは単一ファイルですが、マイクや音声処理はブラウザの対応状況に左右されます。</p>
       <!-- APP:HELP:END -->
     </div>
   </dialog>
+
+  <script type="text/plain" id="loopWorkletSource">
+
+/* Loop Pedal: sample-frame aligned microphone recorder and four-track mixer.
+   The audio thread is the only source of truth for recording boundaries. */
+class LoopPedalProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.rate = sampleRate;
+    this.bpm = 100;
+    this.bars = 2;
+    this.length = this.computeLength();
+    // Asymmetric micro-fades avoid bending the quiet tail toward the first
+    // downbeat sample, which previously created an audible pre-loop ramp.
+    this.seamSamples = Math.max(2, Math.round(this.rate * 0.004));
+    this.seamHeadSamples = Math.max(2, Math.round(this.rate * 0.001));
+    this.beat = Math.round(this.rate * 60 / this.bpm);
+    this.phase = 0;
+    this.countPosition = 0;
+    this.state = 'ready';
+    this.pending = null;
+    this.tracks = [null, null, null, null];
+    this.undo = null;
+    this.generation = 0;
+    this.reportCounter = 0;
+    this.port.onmessage = event => this.handle(event.data || {});
+    this.report('ready');
+  }
+  computeLength() {
+    return Math.round(this.rate * 60 / this.bpm * 4 * this.bars);
+  }
+  hasTracks() {
+    return this.tracks.some(Boolean);
+  }
+  summary() {
+    return this.tracks.map(track => track ? {
+      gain: track.gain, muted: track.muted, shiftMs: track.shiftMs
+    } : null);
+  }
+  report(kind, extra) {
+    this.port.postMessage(Object.assign({
+      kind: kind, generation: this.generation, state: this.state,
+      phase: this.phase, length: this.length, rate: this.rate,
+      countPosition: this.countPosition,
+      position: this.pending ? this.pending.position : 0,
+      pendingIndex: this.pending ? this.pending.index : -1,
+      undo: !!this.undo, summary: this.summary()
+    }, extra || {}));
+  }
+  handle(msg) {
+    if (msg.type === 'configure') {
+      if (this.hasTracks() || this.pending) return;
+      this.bpm = Math.max(40, Math.min(200, Math.round(Number(msg.bpm) || 100)));
+      this.bars = [1, 2, 4].includes(msg.bars) ? msg.bars : 2;
+      this.length = this.computeLength();
+      this.beat = Math.round(this.rate * 60 / this.bpm);
+      this.phase = 0;
+      this.report('configured');
+    } else if (msg.type === 'queue') {
+      if (this.pending || !Number.isInteger(msg.index) || msg.index < 0 || msg.index > 3) return;
+      if (!['ready', 'playing', 'paused'].includes(this.state)) return;
+      try {
+        const buffer = new Float32Array(this.length);
+        const remaining = this.length - this.phase;
+        const loops = this.hasTracks() ? (remaining < this.rate * 0.25 ? 2 : 1) : 0;
+        this.pending = {
+          index: msg.index, mode: msg.mode === 'headphones' ? 'headphones' : 'speaker',
+          buffer: buffer, position: 0, loops: loops
+        };
+        if (!this.hasTracks()) {
+          this.countPosition = 0;
+          this.state = 'count-in';
+        } else {
+          this.state = 'queued';
+        }
+        this.report('queued');
+      } catch (error) {
+        this.pending = null;
+        this.report('error', {reason: 'allocation'});
+      }
+    } else if (msg.type === 'abort') {
+      this.abort();
+    } else if (msg.type === 'pause' || msg.type === 'interrupt') {
+      this.pending = null;
+      this.state = this.hasTracks() ? 'paused' : 'ready';
+      this.report(msg.type === 'interrupt' ? 'interrupted' : 'paused');
+    } else if (msg.type === 'resume') {
+      if (!this.pending) {
+        this.state = this.hasTracks() ? 'playing' : 'ready';
+        this.report('resumed');
+      }
+    } else if (msg.type === 'undo') {
+      if (!this.undo || this.pending) return;
+      this.tracks[this.undo.index] = this.undo.previous;
+      this.undo = null;
+      if (!this.hasTracks()) { this.phase = 0; this.state = 'ready'; }
+      this.report('undone');
+    } else if (msg.type === 'delete') {
+      if (this.pending || !Number.isInteger(msg.index) || msg.index < 0 || msg.index > 3) return;
+      this.tracks[msg.index] = null;
+      this.undo = null;
+      if (!this.hasTracks()) { this.phase = 0; this.state = 'ready'; }
+      this.report('deleted');
+    } else if (msg.type === 'clear') {
+      this.generation = Number.isInteger(msg.generation) ? msg.generation : this.generation + 1;
+      this.tracks = [null, null, null, null];
+      this.undo = null;
+      this.pending = null;
+      this.phase = 0;
+      this.countPosition = 0;
+      this.state = 'ready';
+      this.report('cleared');
+    } else if (msg.type === 'adjust') {
+      const t = this.tracks[msg.index];
+      if (!t || this.pending && this.pending.index === msg.index) return;
+      if (typeof msg.muted === 'boolean') t.muted = msg.muted;
+      if (Number.isFinite(msg.gain)) t.gain = Math.max(0, Math.min(1, msg.gain));
+      if (Number.isFinite(msg.shiftMs)) {
+        t.shiftMs = Math.max(-200, Math.min(200, Math.round(msg.shiftMs / 5) * 5));
+        const target = Math.round(t.shiftMs * this.rate / 1000);
+        if (target !== t.targetShift) {
+          t.shift = t.targetShift;
+          t.targetShift = target;
+          t.shiftFade = 256;
+        }
+      }
+      this.report('adjusted');
+    } else if (msg.type === 'snapshot') {
+      this.port.postMessage({
+        kind: 'snapshot', generation: this.generation, requestId: msg.requestId,
+        length: this.length, rate: this.rate,
+        tracks: this.tracks.map(t => t ? {
+          pcm: t.pcm, gain: t.gain, muted: t.muted, shiftMs: t.shiftMs
+        } : null)
+      });
+    }
+  }
+  abort() {
+    if (!this.pending) return;
+    this.pending = null;
+    this.state = this.hasTracks() ? 'playing' : 'ready';
+    this.report('aborted');
+  }
+  beginRecording() {
+    if (!this.pending) return;
+    this.pending.position = 0;
+    this.state = 'recording';
+    this.report('recording');
+  }
+  finishRecording() {
+    const p = this.pending;
+    if (!p) return;
+    const previous = this.tracks[p.index];
+    const seamStart = Math.max(0, p.buffer.length - Math.min(this.seamSamples, Math.floor(p.buffer.length / 4)));
+    const boundaryDifference = p.buffer[0] - p.buffer[p.buffer.length - 1];
+    const seamFix = Math.abs(boundaryDifference) >= 0.02;
+    const seamHead = Math.min(this.seamHeadSamples, Math.floor(p.buffer.length / 4));
+    // Leave original PCM intact. Only mismatched seams get a 4ms tail
+    // fade-out and a short 1ms head fade-in, so no synthetic DC ramp leads
+    // into the downbeat. Neither operation shifts the sample clock.
+    this.tracks[p.index] = previous ? {
+      pcm: p.buffer, gain: previous.gain, muted: false,
+      shiftMs: previous.shiftMs, shift: previous.targetShift,
+      targetShift: previous.targetShift, shiftFade: 0,
+      smooth: previous.gain, seamStart, seamHead, seamFix
+    } : {
+      pcm: p.buffer, gain: 1, muted: false, shiftMs: 0,
+      shift: 0, targetShift: 0, shiftFade: 0, smooth: 1,
+      seamStart, seamHead, seamFix
+    };
+    this.undo = {index: p.index, previous: previous};
+    this.pending = null;
+    this.state = 'playing';
+    this.report('committed', {index: p.index});
+  }
+  advance() {
+    this.phase++;
+    if (this.phase >= this.length) {
+      this.phase = 0;
+      if (this.state === 'queued' && this.pending) {
+        this.pending.loops--;
+        if (this.pending.loops <= 0) this.beginRecording();
+      }
+    }
+  }
+  // Only mismatched boundaries use micro-fades. Prevent a synthetic ramp on
+  // the tail and a discontinuous sample jump on the next downbeat.
+  loopSample(track, index) {
+    const source = track.pcm[index];
+    if (!track.seamFix) return source;
+    if (index < track.seamHead) {
+      const x = index / Math.max(1, track.seamHead - 1);
+      return source * x * x * (3 - 2 * x);
+    }
+    if (index >= track.seamStart) {
+      const x = (track.pcm.length - 1 - index) /
+        Math.max(1, track.pcm.length - 1 - track.seamStart);
+      return source * x * x * (3 - 2 * x);
+    }
+    return source;
+  }
+  // Signed shiftMs is perceived movement in time; negative means earlier.
+  mix(frame, excludedIndex) {
+    let sum = 0;
+    for (let n = 0; n < 4; n++) {
+      const t = this.tracks[n];
+      if (!t || n === excludedIndex) continue;
+      const destination = t.muted ? 0 : t.gain;
+      t.smooth += (destination - t.smooth) * 0.012;
+      let i = (frame - t.shift + this.length) % this.length;
+      let sample = this.loopSample(t, i);
+      if (t.shiftFade > 0) {
+        const j = (frame - t.targetShift + this.length) % this.length;
+        const blend = 1 - t.shiftFade / 256;
+        sample = sample * (1 - blend) + this.loopSample(t, j) * blend;
+        t.shiftFade--;
+        if (!t.shiftFade) t.shift = t.targetShift;
+      }
+      sum += sample * t.smooth;
+    }
+    // Shared with offline WAV export: smooth peak protection, never wrap int16.
+    return Math.tanh(sum * 0.7);
+  }
+  clickSample() {
+    const within = this.countPosition % this.beat;
+    const duration = Math.max(1, Math.round(this.rate * 0.017));
+    if (within >= duration) return 0;
+    const amp = this.countPosition < this.beat ? 0.19 : 0.12;
+    return amp * Math.sin(2 * Math.PI * 960 * within / this.rate) * (1 - within / duration);
+  }
+  process(inputs, outputs) {
+    const output = outputs[0] && outputs[0][0];
+    if (!output) return true;
+    const input = inputs[0] || [];
+    const left = input[0];
+    const right = input[1];
+    for (let i = 0; i < output.length; i++) {
+      if (this.state === 'count-in') {
+        output[i] = this.clickSample();
+        this.countPosition++;
+        if (this.countPosition >= this.beat * 4) {
+          this.phase = 0;
+          this.beginRecording();
+        }
+      } else if (this.state === 'recording' && this.pending) {
+        const p = this.pending;
+        output[i] = p.mode === 'headphones' ? this.mix(this.phase, p.index) : 0;
+        const raw = left ? (right ? (left[i] + right[i]) * 0.5 : left[i]) : 0;
+        p.buffer[p.position++] = Number.isFinite(raw) ? raw : 0;
+        this.advance();
+        if (p.position >= this.length) this.finishRecording();
+      } else if (this.state === 'playing' || this.state === 'queued') {
+        output[i] = this.mix(this.phase, -1);
+        this.advance();
+      } else {
+        output[i] = 0;
+      }
+    }
+    this.reportCounter += output.length;
+    if (this.reportCounter >= Math.max(1024, this.rate / 18)) {
+      this.reportCounter = 0;
+      this.port.postMessage({
+        kind: 'tick', generation: this.generation, state: this.state,
+        phase: this.phase, countPosition: this.countPosition,
+        position: this.pending ? this.pending.position : 0,
+        pendingIndex: this.pending ? this.pending.index : -1,
+        length: this.length, rate: this.rate
+      });
+    }
+    return true;
+  }
+}
+registerProcessor('loop-pedal-processor', LoopPedalProcessor);
+
+  </script>
 
   <script>
     (() => {
@@ -700,82 +1170,304 @@
       });
 
       const translations = {
-        ja: {
-          brandMeta: '単一HTML・ローカル処理・GitHub Pages',
-          helpTitle: '使い方と注意事項', close: '閉じる',
-          helpBasicsTitle: '基本操作',
-          helpStep1: '作業領域へテキストを入力します。内容は入力のたびに端末内へ保存されます。',
-          helpStep2: '出力ファイル名を必要に応じて変更し、「コピー」または「テキスト保存」で入力内容を取り出せます。',
-          helpStep3: '「サンプルに戻す」や「消去」の直後は、トーストの「元に戻す」から取り消せます。',
-          helpPrivacyTitle: 'プライバシー',
-          helpPrivacyBody: '入力内容と操作はブラウザー内で処理され、このアプリから外部へ送信されません。必要なコードと依存ファイルも配布用HTMLに内包されます。',
-          helpNotesTitle: '注意事項',
-          helpNoteStorage: 'ブラウザーのサイトデータを削除すると、端末内に保存した入力内容も消える場合があります。必要な内容はファイルとして保存してください。',
-          helpNoteBrowser: '一部の機能はブラウザーの制限や端末性能の影響を受けます。重要な成果物は保存後に内容を確認してください。',
-          helpNoteTemplate: 'この画面はスターターの例です。新しいアプリを作る際は、機能と一緒にこのヘルプも実際の操作へ書き換えます。',
-          helpOffline: '配布物は dist/index.html ひとつです。ローカルで直接開くことも、GitHub Pagesで公開することもできます。',
-          introTitle: '単一HTMLアプリのスターター',
-          lead: 'PDF Organizerと同じ、固定依存・完全内包・実行時通信なしの構成から、新しいブラウザーアプリを作れます。',
-          localBadge: '実行時通信なし',
-          workspaceTitle: 'スターター作業領域',
-          workspaceBody: '入力内容はこのブラウザー内だけに保存され、このアプリから送信されません。',
-          characters: '文字', words: '単語', lines: '行', editorLabel: 'テキスト入力',
-          copy: 'コピー', download: 'テキスト保存', sample: 'サンプルに戻す', clear: '消去', savedLocally: '端末内に保存済み', outputFilename: '出力ファイル名', outputFilenameHint: '拡張子は自動で .txt が付きます', undo: '元に戻す', undone: '元に戻しました',
-          confirmTitle: '確認', confirmAction: '実行する', cancel: 'キャンセル',
-          guaranteesTitle: 'テンプレートの基本保証',
-          guaranteesBody: 'アプリ仕様で明示的に変更しない限り、この制約を維持します。',
-          card1Title: '配布物はひとつ', card1Body: 'リリース成果物は dist/index.html。直接開くことも、静的サイトとして公開することもできます。',
-          card2Title: '依存を固定して内包', card2Body: 'npmの外部素材はバージョンとtarball hashを固定し、検証してからHTMLへ内包します。',
-          card3Title: '実行時通信なし', card3Body: 'Content Security Policyで実行時通信を遮断し、ユーザーデータをページ内に保ちます。',
-          card4Title: 'LLM向けの作業契約', card4Body: 'AGENTS.mdとAPP_SPEC.mdで、実装方針、受入条件、完了報告を安定して伝えます。',
-          buildInfo: 'ビルド情報', appVersion: 'アプリバージョン', builtAt: '生成日時', dependencies: '内包依存数',
-          footer: '完全内包HTMLとして生成', copied: 'コピーしました', copyFailed: 'コピーできませんでした', downloaded: 'テキストを保存しました', cleared: '入力を消去しました', restored: 'サンプルを復元しました'
+        "ja": {
+          "brandMeta": "録音・ループ再生・音を重ねる",
+          "helpTitle": "使い方と注意事項",
+          "close": "閉じる",
+          "introTitle": "音を録って、重ねてみよう",
+          "lead": "4つのパッドに音を録り、同じ長さで繰り返し再生。身の回りの音でループを作れます。",
+          "localBadge": "完全ローカル処理",
+          "workspaceTitle": "ループ録音",
+          "workspaceBody": "最初は4拍のカウント後に録音。2つ目からは次のループで録音します。",
+          "startMic": "マイクを使って録音",
+          "retryMic": "マイクを再接続",
+          "resumeAudio": "再開する",
+          "micReady": "マイク準備完了",
+          "bpm": "テンポ (BPM)",
+          "bars": "小節数",
+          "recordingMode": "録音方式",
+          "modeSpeaker": "スマホだけで録音（録音中は無音）",
+          "modeHeadphones": "イヤホンで重ね録り",
+          "modeNoteSpeaker": "録音中はほかの音が聞こえません。音を聴きながら重ねる場合はイヤホン方式にしてください。",
+          "modeNoteHeadphones": "録音中もほかのループが聞こえます。有線イヤホンを推奨。マイク音声は直接再生されません。",
+          "statusInit": "マイクを準備すると録音できます。",
+          "statusLoading": "録音の準備をしています…",
+          "statusReady": "準備完了。空のパッドをタップして録音します。",
+          "statusCount": "4拍のカウントイン中",
+          "statusQueued": "次のループの先頭で録音を始めます",
+          "statusRecording": "録音中。設定した小節数で自動終了します。",
+          "statusPlaying": "ループを再生しています",
+          "statusPaused": "一時停止中",
+          "statusInterrupted": "音声が中断されました。『再開する』を押してください。",
+          "statusNoMic": "マイクが使えません。マイクを確認して『マイクを再接続』を押してください。",
+          "statusError": "録音を開始できませんでした。端末やブラウザの設定を確認してください。",
+          "errorInsecure": "マイクを使えません。HTTPSで開くか、対応ブラウザでローカルHTMLを開いてください。",
+          "errorUnsupported": "このブラウザでは録音に必要な音声機能を利用できません。Chrome、Edge、Safariなどの最新版をお試しください。",
+          "errorDenied": "マイクの使用を許可できませんでした。アドレスバーや端末の設定で許可を確認し、再度お試しください。",
+          "errorNoDevice": "マイクが見つかりません。接続や端末の設定を確認してください。",
+          "errorWorklet": "音声処理を初期化できませんでした。ブラウザとセキュリティ設定を確認してください。",
+          "errorProcessorStopped": "音声処理が停止しました。録音を保持できない場合があります。再読み込みが必要です。",
+          "reloadApp": "再読み込み",
+          "reloadTitle": "アプリを再読み込み",
+          "reloadWarning": "音声処理を復旧できません。再読み込みすると、このページの未保存の録音は消えます。再読み込みしますか？",
+          "statusMicMuted": "マイクが一時停止しました。端末のマイク設定を確認してください。",
+          "errorInputStillMuted": "マイクがまだ停止しています。端末のマイク使用状態を確認してから再開してください。",
+          "errorMemory": "録音用のメモリを確保できませんでした。別のタブを閉じてお試しください。",
+          "errorGeneric": "エラーが発生しました。既存の録音は保持されています。",
+          "padName": "音",
+          "padEmpty": "録音する",
+          "padEmptySub": "タップして録音",
+          "padPlaying": "再生中",
+          "padPlayingSub": "タップでミュート",
+          "padPaused": "一時停止中",
+          "padPausedSub": "タップでミュート",
+          "padMuted": "ミュート",
+          "padMutedSub": "タップで再生",
+          "padQueued": "録音待機",
+          "padQueuedSub": "タップで取消",
+          "padCount": "カウント中",
+          "padCountSub": "まもなく録音",
+          "padRecording": "録音中",
+          "padRecordingSub": "録音を中止で取消",
+          "padRerecord": "録り直し中",
+          "padRerecordSub": "元の音は保持されています",
+          "padMenu": "の設定",
+          "beatReady": "準備中",
+          "beatCount": "カウント",
+          "beatBars": "小節",
+          "beatOf": "/",
+          "beatPause": "一時停止中",
+          "pause": "一時停止",
+          "play": "再生する",
+          "abort": "録音を中止",
+          "undoRecord": "最後の録音を取り消す",
+          "newLoop": "新しいループを作る",
+          "exportTitle": "音声を保存",
+          "outputFilename": "ファイル名",
+          "filenameHint": "拡張子 .wav は自動で付きます",
+          "duration": "長さ",
+          "durationLoop": "ループ1回",
+          "duration30": "30秒",
+          "duration60": "60秒",
+          "downloadWav": "WAVを保存",
+          "cancelExport": "書き出しを中止",
+          "exportProgressLabel": "WAVの生成状況",
+          "exportPreparing": "WAVの準備中…",
+          "exporting": "WAVを作成しています…",
+          "exportSaving": "WAVファイルの準備ができました。",
+          "exportReady": "WAVを作成しました。ダウンロードできたか端末で確認してください。",
+          "exportCanceled": "WAVの書き出しを中止しました。録音は残っています。",
+          "exportCanceling": "書き出しを中止しています…",
+          "exportFail": "WAVを作成できませんでした。録音は残っています。",
+          "exportPreviewTitle": "作成したWAVを確認",
+          "exportPreviewLabel": "作成したWAVの試聴",
+          "exportPreviewHint": "試聴を始めるとループ再生は一時停止します。ファイルの保存は端末側で確認してください。",
+          "downloadAgain": "もう一度WAVを保存",
+          "exportChanged": "音や出力の設定を変更しました。必要ならWAVを再作成してください。",
+          "memoryNote": "録音は一時的なものです。ページを閉じると消えます。必要な音声は保存してください。",
+          "trackGain": "音量",
+          "trackOffset": "録音位置を調整（ミリ秒）",
+          "offsetHelp": "マイナスで早く、プラスで遅く鳴ります。元の音声は変わりません。",
+          "shiftEarlier": "5 ms早める",
+          "shiftReset": "0 msに戻す",
+          "shiftLater": "5 ms遅らせる",
+          "audioDiagnostics": "録音のずれ・音質を確認",
+          "audioDiagnosticsLead": "音がずれたら、録音済みパッドの設定で再生位置を前後に調整できます。",
+          "audioDiagSampleRate": "音声処理の周波数",
+          "audioDiagProcessing": "マイクの自動補正",
+          "audioDiagOutput": "再生側の遅延の目安",
+          "audioDiagnosticsLimit": "これらはブラウザから取得できる範囲の情報です。マイク入力の遅延や実際のイヤホン接続を測定・判定するものではありません。",
+          "notAvailable": "確認できません",
+          "processingEnabled": "一部オン",
+          "processingDisabled": "オフ",
+          "processingPartiallyKnown": "一部オフ（残り不明）",
+          "rerecord": "録り直す",
+          "deleteTrack": "この音を消す",
+          "trackSettings": "の設定",
+          "deleteTitle": "音を削除",
+          "deleteMessage": "この音を削除しますか？削除後は元に戻せません。",
+          "resetTitle": "すべての音を消去",
+          "resetMessage": "4つの録音をすべて消去し、新しいループを作ります。元に戻せません。",
+          "deleteAction": "削除する",
+          "resetAction": "消去する",
+          "confirmTitle": "確認",
+          "confirmAction": "実行する",
+          "cancel": "キャンセル",
+          "undo": "元に戻す",
+          "recorded": "音を録音しました",
+          "undone": "最後の録音を取り消しました",
+          "canceled": "録音を中止しました",
+          "buildInfo": "ビルド情報",
+          "appVersion": "アプリバージョン",
+          "builtAt": "生成日時",
+          "dependencies": "内包依存数",
+          "footer": "音声を端末内で処理",
+          "helpBasicsTitle": "基本操作",
+          "helpStep1": "「マイクを使って録音」を選び、端末からマイクの許可を求められたら許可します。",
+          "helpStep2": "空のパッドを押します。4拍カウント後に録音し、設定した小節数で自動終了します。",
+          "helpStep3": "次の空パッドを押すと、次のループ先頭から自動録音。録音済みパッドを押すとミュートできます。",
+          "helpStep4": "パッド右上の設定から録り直し・音量・位置を調整できます。WAV作成中はループ再生を一時停止し、処理を中止できます。作成後は試聴・再ダウンロードできます。",
+          "helpModeTitle": "録音方式",
+          "helpModeBody": "「スマホだけで録音」では、録音中に既存ループやクリック音は鳴りません。音を聴きながら重ねる場合は「イヤホンで重ね録り」を選んでください。有線イヤホンを推奨します。Bluetoothは録音位置がずれる場合があります。",
+          "helpPrivacyTitle": "プライバシー",
+          "helpPrivacyBody": "録音した音はブラウザ内で処理し、このアプリから外部へ送信しません。マイクの許可は録音の準備操作後にのみ求めます。",
+          "helpNotesTitle": "注意事項",
+          "helpNoteStorage": "録音はメモリにのみ保持します。ページの更新・終了で消えます。必要な音声はWAVで保存してください。",
+          "helpNoteBrowser": "画面ロック、着信、タブ切り替え、マイクの切断で録音が止まる場合があります。復帰後は明示的に再開してください。音声処理が完全に停止した場合は再読み込みが必要で、未保存の録音は失われます。",
+          "helpNoteLatency": "端末や接続方式による録音遅延は完全には自動補正できません。パッドで位置を調整してください。ループの境目では短い音量調整を行うため、素材によって聞こえ方が変わることがあります。",
+          "helpOffline": "音声処理に外部サービスは使いません。配布HTMLは単一ファイルですが、マイクや音声処理はブラウザの対応状況に左右されます。"
         },
-        en: {
-          brandMeta: 'Single file · Local-first · GitHub Pages',
-          helpTitle: 'How to use & notes', close: 'Close',
-          helpBasicsTitle: 'Basics',
-          helpStep1: 'Enter text in the workspace. The content is saved locally as you type.',
-          helpStep2: 'Change the output filename if needed, then use Copy or Download text.',
-          helpStep3: 'After Restore sample or Clear, use Undo in the toast to reverse the change.',
-          helpPrivacyTitle: 'Privacy',
-          helpPrivacyBody: 'Your content and actions are processed in the browser and are not sent outside by this app. Required code and dependencies are embedded in the distributable HTML.',
-          helpNotesTitle: 'Notes',
-          helpNoteStorage: 'Clearing browser site data may also remove content saved locally. Download anything important as a file.',
-          helpNoteBrowser: 'Some features are affected by browser restrictions and device performance. Review important output after saving it.',
-          helpNoteTemplate: 'This screen is a starter example. When building a new app, update this help together with the real features and workflow.',
-          helpOffline: 'The deliverable is one dist/index.html file. It can open locally or be published with GitHub Pages.',
-          introTitle: 'Single HTML App Starter',
-          lead: 'Build a new browser app from the same pinned-dependency, fully embedded, no-runtime-network foundation used by PDF Organizer.',
-          localBadge: 'No runtime network',
-          workspaceTitle: 'Starter workspace',
-          workspaceBody: 'Text stays in this browser. It is never sent by this app.',
-          characters: 'Characters', words: 'Words', lines: 'Lines', editorLabel: 'Text editor',
-          copy: 'Copy', download: 'Download text', sample: 'Restore sample', clear: 'Clear', savedLocally: 'Saved locally', outputFilename: 'Output filename', outputFilenameHint: 'The .txt extension is added automatically', undo: 'Undo', undone: 'Restored',
-          confirmTitle: 'Confirm', confirmAction: 'Continue', cancel: 'Cancel',
-          guaranteesTitle: 'Template guarantees',
-          guaranteesBody: 'Keep these constraints unless the product specification explicitly changes them.',
-          card1Title: 'One deliverable', card1Body: 'The release artifact is dist/index.html. It opens directly and can be hosted as a static page.',
-          card2Title: 'Pinned dependencies', card2Body: 'Third-party npm assets are version-pinned, hashed, and embedded during the build.',
-          card3Title: 'No runtime network', card3Body: 'Content Security Policy blocks runtime connections. User data stays inside the page.',
-          card4Title: 'LLM-ready workflow', card4Body: 'AGENTS.md and APP_SPEC.md give coding agents a stable contract, acceptance criteria, and handoff format.',
-          buildInfo: 'Build information', appVersion: 'App version', builtAt: 'Built at', dependencies: 'Embedded dependencies',
-          footer: 'Generated as one self-contained HTML file', copied: 'Copied', copyFailed: 'Could not copy', downloaded: 'Text downloaded', cleared: 'Text cleared', restored: 'Sample restored'
+        "en": {
+          "brandMeta": "Record · Loop · Layer",
+          "helpTitle": "How to use & notes",
+          "close": "Close",
+          "introTitle": "Record sounds. Build a loop.",
+          "lead": "Record sounds on four pads and play them back in a repeating loop, all in your browser.",
+          "localBadge": "Fully local processing",
+          "workspaceTitle": "Loop recording",
+          "workspaceBody": "The first take starts after four count-in beats. Further takes start at the next loop boundary.",
+          "startMic": "Enable microphone",
+          "retryMic": "Reconnect microphone",
+          "resumeAudio": "Resume audio",
+          "micReady": "Microphone ready",
+          "bpm": "Tempo (BPM)",
+          "bars": "Bars",
+          "recordingMode": "Recording mode",
+          "modeSpeaker": "Phone only (silent while recording)",
+          "modeHeadphones": "Layer with headphones",
+          "modeNoteSpeaker": "Existing sounds are silent while recording. To hear other tracks while recording, choose headphones.",
+          "modeNoteHeadphones": "Other loops play while recording. Wired headphones are recommended. Live microphone monitoring is off.",
+          "statusInit": "Enable the microphone to start recording.",
+          "statusLoading": "Preparing audio…",
+          "statusReady": "Ready. Tap an empty pad to record.",
+          "statusCount": "Four-beat count-in",
+          "statusQueued": "Recording will start at the next loop boundary",
+          "statusRecording": "Recording. This take will end automatically.",
+          "statusPlaying": "Loop is playing",
+          "statusPaused": "Playback is paused",
+          "statusInterrupted": "Audio was interrupted. Select Resume audio to continue.",
+          "statusNoMic": "Microphone unavailable. Check your device and reconnect.",
+          "statusError": "Cannot start recording. Check your browser and microphone settings.",
+          "errorInsecure": "The microphone needs HTTPS or a supported local-file browser context.",
+          "errorUnsupported": "Your browser does not support the audio features required for recording. Try a current version of Chrome, Edge or Safari.",
+          "errorDenied": "Microphone permission was denied. Check browser or system permissions and try again.",
+          "errorNoDevice": "No microphone was found. Check the device connection and try again.",
+          "errorWorklet": "Audio processing could not start. Check the browser and its security restrictions.",
+          "errorProcessorStopped": "Audio processing stopped unexpectedly. Recorded audio may be unavailable. Reload is required.",
+          "reloadApp": "Reload app",
+          "reloadTitle": "Reload Loop Pedal",
+          "reloadWarning": "The audio engine cannot be recovered. Reloading removes unsaved recordings in this tab. Reload now?",
+          "statusMicMuted": "Your microphone was temporarily muted. Check your device's microphone settings.",
+          "errorInputStillMuted": "The microphone is still muted or disconnected. Check the device before resuming.",
+          "errorMemory": "Could not allocate memory for recording. Close other tabs and try again.",
+          "errorGeneric": "An error occurred. Finished takes are still available.",
+          "padName": "Track",
+          "padEmpty": "Record",
+          "padEmptySub": "Tap to record",
+          "padPlaying": "Playing",
+          "padPlayingSub": "Tap to mute",
+          "padPaused": "Paused",
+          "padPausedSub": "Tap to mute",
+          "padMuted": "Muted",
+          "padMutedSub": "Tap to unmute",
+          "padQueued": "Queued",
+          "padQueuedSub": "Tap to cancel",
+          "padCount": "Count-in",
+          "padCountSub": "Recording soon",
+          "padRecording": "Recording",
+          "padRecordingSub": "Use Cancel recording",
+          "padRerecord": "Re-recording",
+          "padRerecordSub": "Original is retained",
+          "padMenu": "settings",
+          "beatReady": "Ready",
+          "beatCount": "Count",
+          "beatBars": "Bar",
+          "beatOf": "/",
+          "beatPause": "Paused",
+          "pause": "Pause",
+          "play": "Play",
+          "abort": "Cancel recording",
+          "undoRecord": "Undo last recording",
+          "newLoop": "New loop",
+          "exportTitle": "Save audio",
+          "outputFilename": "Filename",
+          "filenameHint": "The .wav extension is added automatically",
+          "duration": "Length",
+          "durationLoop": "One loop",
+          "duration30": "30 seconds",
+          "duration60": "60 seconds",
+          "downloadWav": "Download WAV",
+          "cancelExport": "Cancel export",
+          "exportProgressLabel": "WAV export progress",
+          "exportPreparing": "Preparing WAV…",
+          "exporting": "Creating WAV…",
+          "exportSaving": "WAV audio is ready.",
+          "exportReady": "WAV prepared. Confirm the download on your device.",
+          "exportCanceled": "WAV export canceled. Recordings were preserved.",
+          "exportCanceling": "Canceling WAV export…",
+          "exportFail": "Could not create WAV. Your takes are preserved.",
+          "exportPreviewTitle": "Preview the exported WAV",
+          "exportPreviewLabel": "Play the exported WAV",
+          "exportPreviewHint": "Loop playback pauses while you preview this file. Confirm the download on your device.",
+          "downloadAgain": "Download WAV again",
+          "exportChanged": "Tracks or export settings changed. Create a new WAV if needed.",
+          "memoryNote": "Recordings are temporary and disappear when you close or reload the page. Save anything you want to keep.",
+          "trackGain": "Track volume",
+          "trackOffset": "Timing offset (milliseconds)",
+          "offsetHelp": "Negative moves the sound earlier, positive later. Original audio is unchanged.",
+          "shiftEarlier": "5 ms earlier",
+          "shiftReset": "Reset to 0 ms",
+          "shiftLater": "5 ms later",
+          "audioDiagnostics": "Check timing and sound quality",
+          "audioDiagnosticsLead": "If a track feels late, open that pad's settings and move playback slightly earlier or later.",
+          "audioDiagSampleRate": "Audio sample rate",
+          "audioDiagProcessing": "Microphone processing",
+          "audioDiagOutput": "Estimated output latency",
+          "audioDiagnosticsLimit": "This is only what your browser reports. It does not measure microphone capture latency or detect whether headphones are connected.",
+          "notAvailable": "Unavailable",
+          "processingEnabled": "Partly enabled",
+          "processingDisabled": "Off",
+          "processingPartiallyKnown": "Partly off (rest unknown)",
+          "rerecord": "Re-record",
+          "deleteTrack": "Delete this track",
+          "trackSettings": "settings",
+          "deleteTitle": "Delete track",
+          "deleteMessage": "Delete this recording? This cannot be undone.",
+          "resetTitle": "Delete all recordings",
+          "resetMessage": "Delete all four tracks to start a new loop? This cannot be undone.",
+          "deleteAction": "Delete",
+          "resetAction": "Delete all",
+          "confirmTitle": "Confirm",
+          "confirmAction": "Continue",
+          "cancel": "Cancel",
+          "undo": "Undo",
+          "recorded": "Recording saved to track",
+          "undone": "Last recording undone",
+          "canceled": "Recording canceled",
+          "buildInfo": "Build information",
+          "appVersion": "App version",
+          "builtAt": "Built at",
+          "dependencies": "Embedded dependencies",
+          "footer": "Audio processed locally",
+          "helpBasicsTitle": "Basics",
+          "helpStep1": "Choose Enable microphone and grant permission when your browser prompts.",
+          "helpStep2": "Tap an empty pad. Recording starts after four count-in beats and stops after the selected number of bars.",
+          "helpStep3": "Tap another empty pad. Recording begins at the next loop boundary. Tap a recorded pad to mute or unmute.",
+          "helpStep4": "Use pad settings to re-record, adjust volume and timing. WAV creation pauses the loop temporarily and can be canceled. You can preview or download the result again.",
+          "helpModeTitle": "Recording modes",
+          "helpModeBody": "Phone only silences other tracks and metronome clicks during recording. To hear other tracks while recording, select headphones. Wired headphones are recommended; Bluetooth may add delay.",
+          "helpPrivacyTitle": "Privacy",
+          "helpPrivacyBody": "Audio is processed in your browser and is not uploaded by this app. Microphone permission is requested only after you choose to enable it.",
+          "helpNotesTitle": "Notes",
+          "helpNoteStorage": "Takes are kept only in memory and disappear if the page closes or reloads. Download a WAV to keep them.",
+          "helpNoteBrowser": "Screen lock, calls, tab switching or microphone disconnection can interrupt recording. Resume explicitly after returning. If the audio engine stops entirely, reloading is required and unsaved recordings are lost.",
+          "helpNoteLatency": "Device-dependent latency cannot always be corrected automatically. Adjust per-track timing if needed. A brief level adjustment is used at loop edges, so the transition may sound different depending on the recording.",
+          "helpOffline": "No online audio service is required. The distributed HTML is self-contained, but microphone support depends on your browser."
         }
       };
 
-      const storageKeys = {
-        text: `${APP_CONFIG.slug}:starter-text`,
-        language: `${APP_CONFIG.slug}:language`
-      };
-      const sampleText = {
-        ja: 'この領域はサンプルです。\n\n新しいアプリを作るときは APP_SPEC.md に目的と受入条件を書き、LLMに AGENTS.md から読むよう指示してください。',
-        en: 'This workspace is a sample.\n\nFor a new app, describe the goal and acceptance criteria in APP_SPEC.md, then tell the LLM to start with AGENTS.md.'
-      };
-
+      const storageKeys = { language: APP_CONFIG.slug + ':language' };
       const $ = selector => document.querySelector(selector);
-      const editor = $('#editor');
-      const outputFilename = $('#outputFilename');
       let language = readStorage(storageKeys.language) || detectLanguage();
 
       // Reusable Promise-based confirmation API. Canonical source: components/confirm-dialog.html.
@@ -811,6 +1503,7 @@
           return new Promise(resolve => {
             resolver = resolve;
             dialog.showModal();
+            lockHelpBackground();
             requestAnimationFrame(() => cancelButton.focus({ preventScroll: true }));
           });
         }
@@ -818,6 +1511,7 @@
         closeButton.addEventListener('click', () => finish(false));
         cancelButton.addEventListener('click', () => finish(false));
         okButton.addEventListener('click', () => finish(true));
+        dialog.addEventListener('close', unlockHelpBackground);
         dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
         dialog.addEventListener('click', event => {
           const rect = dialog.getBoundingClientRect();
@@ -874,104 +1568,861 @@
       })();
       window.AppToast = AppToast;
       function showToast(message, options = {}) { AppToast.show({ message, ...options }); }
+
+      // APP:SCRIPT:BEGIN — Loop Pedal. Sound data stays in memory only.
+      const tracks = [null, null, null, null];
+      // All pad artwork is inline SVG, with no user-controlled markup or assets.
+      const PAD_SYMBOLS = Object.freeze({
+        record: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>',
+        playing: '<path d="m9 6 9 6-9 6z" fill="currentColor" stroke="none"/>',
+        muted: '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="m15 9 6 6m0-6-6 6"/>',
+        paused: '<rect x="6.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="13.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
+        queued: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        recording: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>'
+      });
+      let engine = null;
+      let microphone = null;
+      let inputSource = null;
+      let context = null;
+      let initializing = false;
+      let exporting = false;
+      let activeMic = false;
+      let needsResume = false;
+      let processorFailed = false;
+      let queueGesturePending = false;
+      let interruptionRevision = 0;
+      let phase = 0;
+      let totalFrames = 0;
+      let audioRate = 0;
+      let countPosition = 0;
+      let recordPosition = 0;
+      let state = 'uninitialized';
+      let pendingPad = -1;
+      let selectedPad = -1;
+      let undoAvailable = false;
+      let generation = 0;
+      let exportIndex = 0;
+      const exportRequests = new Map();
+      let activeExportJob = null;
+      let exportedUrl = null;
+      let exportNotice = null;
+      let statusOverride = '';
+      const isBusy = () => ['queued', 'count-in', 'recording'].includes(state);
+      const hasTakes = () => tracks.some(Boolean);
+      const mode = () => $('#modeSelect').value;
+      const send = message => { if (engine) engine.port.postMessage(message); };
+      const t = key => translations[language]?.[key] ?? translations.en[key] ?? key;
+
+      function updateAudioDiagnostics() {
+        $('#audioDiagRate').textContent = context?.sampleRate ? (context.sampleRate / 1000).toFixed(1) + ' kHz' : t('notAvailable');
+        const outputDelay = Number(context?.outputLatency);
+        $('#audioDiagOutput').textContent = Number.isFinite(outputDelay) && outputDelay >= 0
+          ? Math.round(outputDelay * 1000) + ' ms' : t('notAvailable');
+        const settings = microphone?.getAudioTracks()?.[0]?.getSettings?.() || {};
+        const options = ['echoCancellation','noiseSuppression','autoGainControl'];
+        const reported = options.filter(key => typeof settings[key] === 'boolean');
+        $('#audioDiagProcessing').textContent = !reported.length ? t('notAvailable')
+          : reported.some(key => settings[key]) ? t('processingEnabled')
+          : reported.length === options.length ? t('processingDisabled') : t('processingPartiallyKnown');
+      }
+      function setExportNotice(key, details = '') {
+        exportNotice = key ? {key, details} : null;
+        $('#exportResult').textContent = exportNotice ? t(key) + details : '';
+      }
+      function clearExportPreview(notice = false) {
+        const audio = $('#exportPreviewAudio');
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        $('#exportDownloadAgain').removeAttribute('href');
+        $('#exportPreviewBlock').hidden = true;
+        if (exportedUrl) URL.revokeObjectURL(exportedUrl);
+        exportedUrl = null;
+        if (notice) setExportNotice('exportChanged');
+        else if (!exporting) setExportNotice(null);
+      }
+      function markExportStale() {
+        if (!exportedUrl || exporting) return;
+        clearExportPreview(true);
+      }
+      function readableTrack(n) { return t('padName') + ' ' + (n + 1); }
+      function updateModeNote() {
+        $('#modeNote').textContent = t(mode() === 'headphones' ? 'modeNoteHeadphones' : 'modeNoteSpeaker');
+      }
       function applyLanguage() {
         document.documentElement.lang = language;
-        document.querySelectorAll('[data-i18n]').forEach(element => { element.textContent = translate(element.dataset.i18n); });
-        document.querySelectorAll('[data-i18n-title]').forEach(element => { element.title = translate(element.dataset.i18nTitle); });
-        document.querySelectorAll('[data-i18n-aria-label]').forEach(element => { element.setAttribute('aria-label', translate(element.dataset.i18nAriaLabel)); });
-        $('#languageButton').textContent = language === 'ja' ? 'EN' : '日本語';
+        document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+        document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
+        $('#languageButton').textContent = language === 'ja' ? 'EN' : 'JA';
         $('#languageButton').setAttribute('aria-label', language === 'ja' ? '英語に切り替え' : 'Switch to Japanese');
         document.title = language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#brandName').textContent = language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#footerName').textContent = language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
-        if (!editor.value) editor.value = sampleText[language];
-        updateStats();
+        $('#closeTrackDialog').setAttribute('aria-label', t('close'));
+        updateModeNote();
+        if (exportNotice) setExportNotice(exportNotice.key, exportNotice.details);
+        updateUI();
       }
-      function updateStats() {
-        const value = editor.value;
-        const words = value.trim() ? (value.match(/[\p{L}\p{N}]+(?:['’_-][\p{L}\p{N}]+)*/gu) || []).length : 0;
-        $('#characterCount').textContent = new Intl.NumberFormat(language).format([...value].length);
-        $('#wordCount').textContent = new Intl.NumberFormat(language).format(words);
-        $('#lineCount').textContent = new Intl.NumberFormat(language).format(value ? value.split(/\r?\n/).length : 0);
-        $('#saveStatus').textContent = translate('savedLocally');
+      function showError(message) {
+        statusOverride = message;
+        updateUI();
+        AppToast.show({message, duration:6000, tone:'danger'});
       }
-      function saveText() {
-        writeStorage(storageKeys.text, editor.value);
-        updateStats();
+      function statusText() {
+        if (processorFailed) return t('errorProcessorStopped');
+        if (statusOverride) return statusOverride;
+        if (initializing) return t('statusLoading');
+        if (needsResume) return t('statusInterrupted');
+        if (!activeMic) return context ? t('statusNoMic') : t('statusInit');
+        if (state === 'count-in') return t('statusCount');
+        if (state === 'queued') return t('statusQueued');
+        if (state === 'recording') return t('statusRecording');
+        if (state === 'playing') return t('statusPlaying');
+        if (state === 'paused') return t('statusPaused');
+        return t('statusReady');
       }
-      async function copyText() {
+      function updateUI() {
+        const busy = isBusy();
+        const any = hasTakes();
+        const ready = !!engine && activeMic && !needsResume && !processorFailed && !initializing && !exporting;
+        $('#cancelExportButton').hidden = !exporting;
+        const status = $('#engineStatus');
+        status.textContent = statusText();
+        status.classList.toggle('error', Boolean(statusOverride) || processorFailed);
+        const micButton = $('#micButton');
+        micButton.hidden = ready;
+        micButton.disabled = initializing || exporting;
+        micButton.textContent = t(processorFailed ? 'reloadApp' : !activeMic && context ? 'retryMic' : needsResume ? 'resumeAudio' : 'startMic');
+        $('#bpmInput').disabled = busy || any || exporting;
+        $('#barsSelect').disabled = busy || any || exporting;
+        $('#modeSelect').disabled = busy || exporting;
+        $('#outputFilename').disabled = exporting;
+        $('#exportDuration').disabled = exporting;
+        $('#sampleInfo').textContent = $('#bpmInput').value + ' BPM · ' + $('#barsSelect').value + (language === 'ja' ? '小節' : ' bars') + (audioRate ? ' · ' + Math.round(audioRate / 1000 * 10) / 10 + ' kHz' : '');
+        updateAudioDiagnostics();
+        for (let i = 0; i < 4; i++) {
+          const pad = $('#pad' + i);
+          const padStatus = $('#padStatus' + i);
+          const padSub = $('#padSub' + i);
+          const mine = pendingPad === i && busy;
+          const track = tracks[i];
+          let statusKey = 'padEmpty', subKey = 'padEmptySub';
+          if (mine) {
+            statusKey = state === 'count-in' ? 'padCount' : state === 'queued' ? 'padQueued' : track ? 'padRerecord' : 'padRecording';
+            subKey = state === 'queued' ? 'padQueuedSub' : state === 'count-in' ? 'padCountSub' : track ? 'padRerecordSub' : 'padRecordingSub';
+          } else if (track) {
+            statusKey = track.muted ? 'padMuted' : state === 'paused' ? 'padPaused' : 'padPlaying';
+            subKey = track.muted ? 'padMutedSub' : state === 'paused' ? 'padPausedSub' : 'padPlayingSub';
+          }
+          const symbol = mine
+            ? state === 'queued' || state === 'count-in' ? 'queued' : 'recording'
+            : track ? track.muted ? 'muted' : state === 'paused' ? 'paused' : 'playing' : 'record';
+          const symbolElement = pad.querySelector('.lp-pad-mark');
+          if (symbolElement.dataset.symbol !== symbol) {
+            symbolElement.innerHTML = PAD_SYMBOLS[symbol];
+            symbolElement.dataset.symbol = symbol;
+          }
+          if (track) pad.setAttribute('aria-pressed', String(!track.muted));
+          else pad.removeAttribute('aria-pressed');
+          $('#padName' + i).textContent = readableTrack(i);
+          padStatus.textContent = t(statusKey);
+          padSub.textContent = t(subKey);
+          pad.setAttribute('aria-label', readableTrack(i) + ': ' + t(statusKey) + '. ' + t(subKey));
+          pad.classList.toggle('has-take', Boolean(track));
+          pad.classList.toggle('is-muted', Boolean(track?.muted));
+          pad.classList.toggle('is-queued', mine && state === 'queued');
+          pad.classList.toggle('is-recording', mine && (state === 'count-in' || state === 'recording'));
+          pad.disabled = !ready || (busy && !mine && !track) || (busy && !mine && Boolean(track));
+          const menu = $('#padMenu' + i);
+          menu.hidden = !track;
+          menu.disabled = busy || exporting || processorFailed;
+          menu.setAttribute('aria-label', readableTrack(i) + ' ' + t('trackSettings'));
+        }
+        $('#abortButton').disabled = !busy || exporting;
+        $('#pauseButton').disabled = !any || !ready;
+        $('#pauseButton').textContent = t(state === 'paused' ? 'play' : 'pause');
+        $('#undoButton').disabled = !undoAvailable || busy || exporting || needsResume || processorFailed;
+        $('#resetButton').disabled = !any || busy || exporting || processorFailed;
+        // Finished audio can still be saved when the mic becomes unavailable.
+        $('#downloadButton').disabled = !any || busy || exporting || !engine || processorFailed;
+        $('#progressLabel').textContent = state === 'count-in' ? '4 / 4' : (totalFrames ? Math.round(totalFrames / audioRate * 10) / 10 + ' s' : '—');
+        drawBeats();
+      }
+      function drawBeats() {
+        const bars = Number($('#barsSelect').value);
+        let bar = 1, beat = 1, ratio = 0;
+        if (state === 'count-in') {
+          const perBeat = Math.max(1, Math.round((audioRate || 48000) * 60 / Number($('#bpmInput').value)));
+          beat = Math.min(4, Math.floor(countPosition / perBeat) + 1);
+          ratio = Math.min(1, countPosition / (4 * perBeat));
+          $('#beatLabel').textContent = t('beatCount') + ' ' + beat + ' / 4';
+        } else if (state === 'recording' || state === 'playing' || state === 'queued') {
+          const frames = state === 'recording' ? recordPosition : phase;
+          const progress = totalFrames ? Math.min(0.999999, frames / totalFrames) : 0;
+          const beats = Math.floor(progress * bars * 4);
+          bar = Math.floor(beats / 4) + 1;
+          beat = beats % 4 + 1;
+          ratio = progress;
+          $('#beatLabel').textContent = t('beatBars') + ' ' + bar + ' ' + t('beatOf') + ' ' + bars + ' · ' + beat + '/4';
+        } else {
+          $('#beatLabel').textContent = t(state === 'paused' ? 'beatPause' : 'beatReady');
+        }
+        const active = Math.floor(ratio * 8);
+        $('#beatMarkers').querySelectorAll('span').forEach((mark, n) => {
+          mark.classList.toggle('active', n <= active && (state === 'playing' || state === 'queued' || state === 'count-in'));
+          mark.classList.toggle('recording', n <= active && state === 'recording');
+        });
+      }
+      function onAudioMessage(message) {
+        if (message.generation !== generation) return;
+        if (message.kind === 'snapshot') {
+          const request = exportRequests.get(message.requestId);
+          if (request) { clearTimeout(request.timeout); exportRequests.delete(message.requestId); request.resolve(message); }
+          return;
+        }
+        if (message.kind === 'tick') {
+          phase = message.phase; countPosition = message.countPosition; recordPosition = message.position;
+          totalFrames = message.length; audioRate = message.rate;
+          drawBeats();
+          return;
+        }
+        state = message.state;
+        phase = message.phase;
+        countPosition = message.countPosition;
+        recordPosition = message.position;
+        totalFrames = message.length;
+        audioRate = message.rate;
+        pendingPad = message.pendingIndex;
+        undoAvailable = Boolean(message.undo);
+        if (Array.isArray(message.summary)) {
+          for (let i = 0; i < 4; i++) tracks[i] = message.summary[i];
+        }
+        if (needsResume) {
+          // Old queued/recording callbacks can arrive after the page or input
+          // stopped. They must not reopen an uncommitted take in the UI.
+          state = hasTakes() ? 'paused' : 'ready';
+          pendingPad = -1;
+        }
+        if (['adjusted','committed','undone','deleted','cleared'].includes(message.kind)) markExportStale();
+        if (message.kind === 'error') showError(t(message.reason === 'allocation' ? 'errorMemory' : 'errorGeneric'));
+        if (message.kind === 'committed' && !needsResume && !processorFailed) {
+          AppToast.show({message:t('recorded') + ' ' + readableTrack(message.index),tone:'success',duration:3200});
+        }
+        if (message.kind === 'undone') AppToast.show({message:t('undone')});
+        if (message.kind === 'aborted') AppToast.show({message:t('canceled')});
+        updateUI();
+      }
+      function stopStream() {
+        if (microphone) microphone.getTracks().forEach(track => track.stop());
+        microphone = null;
+        inputSource?.disconnect();
+        inputSource = null;
+        activeMic = false;
+      }
+      function interruption(message) {
+        if (!context || !engine || needsResume) return;
+        interruptionRevision++;
+        needsResume = true;
+        statusOverride = message || '';
+        // Discard only the UI representation of an uncommitted take now.
+        // The audio thread receives the matching interrupt when it can run.
+        if (isBusy()) {
+          pendingPad = -1;
+          state = hasTakes() ? 'paused' : 'ready';
+          recordPosition = 0;
+        }
+        send({type:'interrupt'});
+        if (context.state === 'running') context.suspend().catch(() => {});
+        updateUI();
+      }
+      function microphoneEnded(stream) {
+        // An 'ended' callback from a *previous* device must never stop a
+        // replacement stream, even when the two events race on mobile.
+        if (microphone !== stream) return;
+        stopStream();
+        interruption(t('statusNoMic'));
+        updateUI();
+      }
+      function microphoneMuted(stream) {
+        if (microphone !== stream) return;
+        interruption(t('statusMicMuted'));
+      }
+      function attachStream(stream) {
+        stopStream();
+        microphone = stream;
+        inputSource = context.createMediaStreamSource(stream);
+        inputSource.connect(engine);
+        activeMic = true;
+        stream.getAudioTracks().forEach(track => {
+          track.addEventListener('ended', () => microphoneEnded(stream), {once:true});
+          track.addEventListener('mute', () => microphoneMuted(stream));
+        });
+      }
+      async function prepareMicrophone() {
+        if (initializing || exporting) return;
+        if (processorFailed) {
+          const approved = await AppConfirm.ask({
+            title: t('reloadTitle'),
+            message: t('reloadWarning'),
+            confirmLabel: t('reloadApp'),
+            cancelLabel: t('cancel'),
+            tone: 'danger'
+          });
+          if (approved) window.location.reload();
+          return;
+        }
+        if (needsResume && activeMic && engine) {
+          const track = microphone?.getAudioTracks()?.[0];
+          if (!track || track.readyState !== 'live' || track.muted) {
+            showError(t('errorInputStillMuted'));
+            return;
+          }
+          try {
+            // The pending take must be discarded even if the browser paused before
+            // processing the previous interruption message.
+            const resumeRevision = interruptionRevision;
+            send({type:'interrupt'});
+            await context.resume();
+            if (document.hidden || resumeRevision !== interruptionRevision ||
+                track.readyState !== 'live' || track.muted || processorFailed) {
+              send({type:'interrupt'});
+              if (context.state === 'running') await context.suspend();
+              needsResume = true;
+              updateUI();
+              return;
+            }
+            send({type:'resume'});
+            needsResume = false;
+            statusOverride = '';
+            updateUI();
+          } catch { showError(t('errorWorklet')); }
+          return;
+        }
+        if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) { showError(t('errorInsecure')); return; }
+        if (!(window.AudioContext || window.webkitAudioContext) || !window.AudioWorkletNode) { showError(t('errorUnsupported')); return; }
+        initializing = true;
+        const startRevision = interruptionRevision;
+        statusOverride = '';
+        updateUI();
         try {
-          await navigator.clipboard.writeText(editor.value);
-          showToast(translate('copied'));
-        } catch {
-          editor.select();
-          const ok = document.execCommand('copy');
-          showToast(translate(ok ? 'copied' : 'copyFailed'));
+          if (!context) {
+            context = new (window.AudioContext || window.webkitAudioContext)({latencyHint:'interactive'});
+            context.addEventListener('statechange', () => {
+              // Mobile OS audio focus changes can suspend the context without
+              // a visibility event. Do not auto-restart an unfinished take.
+              if (context.state !== 'running' && activeMic && !initializing && !needsResume) {
+                interruption('');
+              }
+            });
+            // Start/resume in the initiating user gesture before permission prompts.
+            const initialResume = context.resume();
+            const source = $('#loopWorkletSource').textContent;
+            const url = URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+            try { await context.audioWorklet.addModule(url); }
+            finally { URL.revokeObjectURL(url); }
+            engine = new AudioWorkletNode(context, 'loop-pedal-processor', {
+              numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[1]
+            });
+            engine.port.onmessage = event => onAudioMessage(event.data || {});
+            engine.onprocessorerror = () => {
+              processorFailed = true;
+              stopStream();
+              interruption(t('errorProcessorStopped'));
+              statusOverride = t('errorProcessorStopped');
+              updateUI();
+            };
+            engine.connect(context.destination);
+            await initialResume;
+            send({type:'configure',bpm:Number($('#bpmInput').value),bars:Number($('#barsSelect').value)});
+          }
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1},
+            video:false
+          });
+          attachStream(stream);
+          if (document.hidden || startRevision !== interruptionRevision) {
+            needsResume = true;
+            send({type:'interrupt'});
+            if (context.state === 'running') await context.suspend();
+            statusOverride = t('statusInterrupted');
+          } else {
+            await context.resume();
+            // A tab or audio-focus interruption can happen while resuming.
+            if (document.hidden || startRevision !== interruptionRevision || processorFailed) {
+              needsResume = true;
+              send({type:'interrupt'});
+              if (context.state === 'running') await context.suspend();
+              statusOverride = t('statusInterrupted');
+            } else {
+              send({type:'resume'});
+              needsResume = false;
+              statusOverride = '';
+            }
+          }
+        } catch (error) {
+          // A failed first AudioWorklet load must be retryable. Keeping a context
+          // without its node would make every subsequent mic attempt fail.
+          if (!engine && context) {
+            try { await context.close(); } catch { /* already closed */ }
+            context = null;
+          } else if (engine && activeMic) {
+            needsResume = true;
+            send({type:'interrupt'});
+          }
+          if (microphone && !activeMic) stopStream();
+          if (engine && activeMic) needsResume = true;
+          const name = error?.name || '';
+          if (name === 'NotAllowedError' || name === 'PermissionDeniedError') statusOverride = t('errorDenied');
+          else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') statusOverride = t('errorNoDevice');
+          else if (!engine) statusOverride = t('errorWorklet');
+          else statusOverride = t('statusError');
+          AppToast.show({message:statusOverride,tone:'danger',duration:6000});
+        } finally {
+          initializing = false;
+          updateUI();
         }
       }
-      function normalizedFilenameBase() {
-        const fallback = APP_CONFIG.slug || 'text';
-        const cleaned = outputFilename.value.trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\.+$/g, '').trim();
-        let base = cleaned.replace(/\.txt$/i, '') || fallback;
-        if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base)) base = `${base}-file`;
-        if (!cleaned) outputFilename.value = fallback;
-        return base.slice(0, 120);
+      function configure() {
+        if (hasTakes() || isBusy()) return;
+        const bpmField = $('#bpmInput');
+        const bpm = Math.max(40,Math.min(200,Math.round(Number(bpmField.value) || 100)));
+        bpmField.value = String(bpm);
+        const bars = Number($('#barsSelect').value);
+        send({type:'configure',bpm,bars});
+        updateUI();
       }
-      function downloadText() {
-        const url = URL.createObjectURL(new Blob([editor.value], { type: 'text/plain;charset=utf-8' }));
-        const anchor = document.createElement('a');
-        const filenameBase = normalizedFilenameBase();
-        outputFilename.value = filenameBase;
-        anchor.href = url;
-        anchor.download = `${filenameBase}.txt`;
-        anchor.click();
-        URL.revokeObjectURL(url);
-        showToast(translate('downloaded'), { tone: 'success' });
+      async function queuePad(index, forceReplace = false) {
+        if (!engine || !activeMic || needsResume || processorFailed || initializing || exporting || queueGesturePending) return;
+        $('#exportPreviewAudio').pause();
+        if (isBusy()) {
+          if (pendingPad === index && state === 'queued') send({type:'abort'});
+          return;
+        }
+        if (tracks[index] && !forceReplace) {
+          send({type:'adjust',index,muted:!tracks[index].muted});
+          return;
+        }
+        const requestGeneration = generation;
+        if (context.state !== 'running') {
+          queueGesturePending = true;
+          try { await context.resume(); }
+          catch { showError(t('errorWorklet')); return; }
+          finally { queueGesturePending = false; }
+        }
+        // A microphone interruption, new session, or second user action during
+        // the awaited resume must never turn into a late recording request.
+        if (requestGeneration !== generation || needsResume || processorFailed ||
+            !activeMic || initializing || exporting || isBusy() || !engine) return;
+        send({type:'resume'});
+        send({type:'queue',index,mode:mode()});
+        pendingPad = index;
+        state = hasTakes() ? 'queued' : 'count-in';
+        statusOverride = '';
+        updateUI();
+      }
+      async function togglePause() {
+        if (!engine || !activeMic || needsResume || processorFailed || exporting || !hasTakes()) return;
+        if (state === 'paused') {
+          $('#exportPreviewAudio').pause();
+          const requestGeneration = generation;
+          try {
+            await context.resume();
+            if (requestGeneration !== generation || needsResume || processorFailed || !activeMic) return;
+            send({type:'resume'});
+          } catch { showError(t('errorWorklet')); }
+        } else send({type:'pause'});
+      }
+      function confirmCanOperate() { return !exporting && !processorFailed && !!engine && !isBusy(); }
+      async function resetAll() {
+        if (!hasTakes() || exporting || isBusy()) return;
+        const allowed = await AppConfirm.ask({
+          title:t('resetTitle'), message:t('resetMessage'),tone:'danger',
+          confirmLabel:t('resetAction'),cancelLabel:t('cancel')
+        });
+        if (!allowed || exporting || isBusy()) return;
+        generation++;
+        exportRequests.forEach(request => {clearTimeout(request.timeout);request.reject(new Error('reset'));});
+        exportRequests.clear();
+        tracks.fill(null);
+        undoAvailable = false;
+        pendingPad = -1;
+        state = 'ready';
+        send({type:'clear',generation});
+        clearExportPreview();
+        updateUI();
+      }
+      function openTrackDialog(index) {
+        if (!tracks[index] || isBusy() || exporting || processorFailed || $('#trackDialog').open) return;
+        selectedPad = index;
+        $('#trackDialogTitle').textContent = readableTrack(index) + ' ' + t('trackSettings');
+        $('#gainInput').value = String(Math.round(tracks[index].gain * 100));
+        $('#shiftInput').value = String(tracks[index].shiftMs);
+        $('#gainValue').textContent = $('#gainInput').value + '%';
+        $('#shiftValue').textContent = $('#shiftInput').value + ' ms';
+        $('#trackDialog').showModal();
+        lockHelpBackground();
+      }
+      function closeTrackDialog() { $('#trackDialog').close(); }
+      function adjustSelected(name, value) {
+        if (selectedPad < 0 || !tracks[selectedPad] || isBusy() || exporting || processorFailed) return;
+        send({type:'adjust',index:selectedPad,[name]:value});
+      }
+      async function deleteSelected() {
+        const index = selectedPad;
+        if (index < 0 || !tracks[index] || !confirmCanOperate()) return;
+        closeTrackDialog();
+        const ok = await AppConfirm.ask({
+          title:t('deleteTitle'),message:t('deleteMessage'),tone:'danger',
+          confirmLabel:t('deleteAction'),cancelLabel:t('cancel')
+        });
+        if (ok && !isBusy() && !exporting) send({type:'delete',index});
+      }
+      function defaultFilename() {
+        const now = new Date();
+        const p = n => String(n).padStart(2,'0');
+        return 'loop-pedal-' + now.getFullYear() + p(now.getMonth()+1) + p(now.getDate()) + '-' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds());
+      }
+      function normalizedFilename() {
+        const fallback = defaultFilename();
+        // Also remove bidi controls to avoid misleading displayed extensions.
+        let base = $('#outputFilename').value.trim()
+          .replace(/[\\/:*?"<>|\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g,'-')
+          .replace(/(?:\.wav)+$/i,'')
+          .replace(/[.\s]+$/g,'').trim();
+        if (!base || base === '.' || base === '..') base = fallback;
+        // Device names remain reserved on Windows even when an extension follows.
+        base = base.replace(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?=\.|$)/i, '$1-audio');
+        base = base.slice(0,110);
+        $('#outputFilename').value = base;
+        return base;
+      }
+      function wavHeader(view, frames, rate) {
+        const bytes = frames * 2;
+        const ascii = (at,value) => { for(let i=0;i<value.length;i++) view.setUint8(at+i,value.charCodeAt(i)); };
+        ascii(0,'RIFF'); view.setUint32(4,bytes+36,true);ascii(8,'WAVE');
+        ascii(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);
+        view.setUint16(22,1,true);view.setUint32(24,rate,true);
+        view.setUint32(28,rate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);
+        ascii(36,'data');view.setUint32(40,bytes,true);
+      }
+      function playbackSample(take, frame, loopFrames, rate) {
+        const shift = Math.round(take.shiftMs * rate / 1000);
+        let index = (frame % loopFrames - shift) % loopFrames;
+        if (index < 0) index += loopFrames;
+        let sample = take.pcm[index];
+        if (take.seamFix) {
+          if (index < take.seamHead) {
+            const x = index / Math.max(1, take.seamHead - 1);
+            sample *= x * x * (3 - 2 * x);
+          } else if (index >= take.seamStart) {
+            const x = (loopFrames - 1 - index) /
+              Math.max(1, loopFrames - 1 - take.seamStart);
+            sample *= x * x * (3 - 2 * x);
+          }
+        }
+        return sample * take.gain;
+      }
+      function canceledExportError() {
+        const error = new Error('Export canceled');
+        error.name = 'AbortError';
+        return error;
+      }
+      function updateExportProgress(value) {
+        const progress = $('#exportProgress');
+        const pct = Math.max(0, Math.min(100, Math.round(value)));
+        progress.value = pct;
+        $('#exportProgressText').textContent = pct + '%';
+      }
+      function cancelExport() {
+        const job = activeExportJob;
+        if (!job || job.cancelled) return;
+        job.cancelled = true;
+        setExportNotice('exportCanceling');
+        if (typeof job.cancelWait === 'function') job.cancelWait();
+        const request = exportRequests.get(job.requestId);
+        if (request) {
+          clearTimeout(request.timeout);
+          exportRequests.delete(job.requestId);
+          request.reject(canceledExportError());
+        }
+      }
+      function resumeForExport(job) {
+        return new Promise((resolve, reject) => {
+          let settled = false;
+          let timeout = 0;
+          function finish(error) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            job.cancelWait = null;
+            if (error) reject(error);
+            else resolve();
+          }
+          job.cancelWait = () => finish(canceledExportError());
+          timeout = setTimeout(() => finish(new Error('Audio resume timeout')), 12000);
+          // Invoke resume synchronously from the initiating click: some browsers
+          // require user activation to resume suspended audio contexts.
+          try { Promise.resolve(context.resume()).then(() => finish(null), finish); }
+          catch (error) { finish(error); }
+        });
+      }
+      async function encodeWav(snapshot,duration,job,onProgress=()=>{}) {
+        const length = snapshot.length;
+        const rate = snapshot.rate;
+        const frames = duration === 'loop' ? length : Math.round(rate*Number(duration));
+        if (!Number.isSafeInteger(length) || length <= 0 || !Number.isInteger(rate) ||
+            rate <= 0 || !Number.isSafeInteger(frames) || frames <= 0 ||
+            frames > 30000000 || 44+frames*2 > 0xffffffff) {
+          throw new Error('Invalid output size');
+        }
+        if (!Array.isArray(snapshot.tracks) || snapshot.tracks.length !== 4 ||
+            snapshot.tracks.some(take => take && (!take.pcm ||
+            take.pcm.length !== length || !Number.isFinite(take.gain) ||
+            !Number.isFinite(take.shiftMs)))) {
+          throw new Error('Invalid track snapshot');
+        }
+        // A single full-size output buffer; no duplicate full-length mix array.
+        const buffer = new ArrayBuffer(44+frames*2);
+        const view = new DataView(buffer);
+        wavHeader(view,frames,rate);
+        const seamSamples = Math.max(2,Math.round(rate * 0.004));
+        const seamHeadSamples = Math.max(2,Math.round(rate * 0.001));
+        const audible = snapshot.tracks.filter(take=>take && !take.muted && take.gain>0)
+          .map(take => {
+            const seamStart = Math.max(0, take.pcm.length -
+              Math.min(seamSamples, Math.floor(take.pcm.length / 4)));
+            const seamHead = Math.min(seamHeadSamples,Math.floor(take.pcm.length / 4));
+            const seamFix = Math.abs(take.pcm[0] - take.pcm[take.pcm.length - 1]) >= 0.02;
+            return {...take, seamStart, seamHead, seamFix};
+          });
+        const fadeFrames = duration === 'loop' ? 0 : Math.min(frames,Math.round(rate*0.25));
+        for (let start=0;start<frames;start+=8192) {
+          if (job?.cancelled) throw canceledExportError();
+          const end = Math.min(frames,start+8192);
+          for (let i=start;i<end;i++) {
+            let sum=0;
+            for (const take of audible) sum += playbackSample(take,i,length,rate);
+            let sample=Math.tanh(sum*0.7);
+            if (fadeFrames && i>=frames-fadeFrames)
+              sample*=Math.max(0,(frames-i-1)/fadeFrames);
+            sample=Math.max(-1,Math.min(1,sample));
+            view.setInt16(44+i*2,sample<0?Math.round(sample*32768):Math.round(sample*32767),true);
+          }
+          onProgress(end / frames * 100);
+          // Yield so the cancel button remains responsive even on smartphones.
+          if (end < frames) await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        if (job?.cancelled) throw canceledExportError();
+        return buffer;
+      }
+      function requestSnapshot(job) {
+        return new Promise((resolve,reject)=>{
+          if (job.cancelled) {reject(canceledExportError());return;}
+          const requestId = ++exportIndex;
+          job.requestId = requestId;
+          const timeout = setTimeout(() => {
+            exportRequests.delete(requestId);
+            reject(new Error('Snapshot timeout'));
+          },12000);
+          exportRequests.set(requestId,{resolve,reject,timeout});
+          send({type:'snapshot',requestId});
+        });
+      }
+      async function downloadWav() {
+        if (!engine || !hasTakes() || isBusy() || exporting || processorFailed) return;
+        exporting = true;
+        const job = {cancelled:false,requestId:null,cancelWait:null};
+        activeExportJob = job;
+        const wasSuspended = context.state !== 'running';
+        const wasPlaying = state === 'playing' && !needsResume;
+        const sessionGeneration = generation;
+        const duration = $('#exportDuration').value;
+        const filename = normalizedFilename() + '.wav';
+        clearExportPreview();
+        $('#exportProgressWrap').hidden = false;
+        $('#exportProgress').removeAttribute('value');
+        $('#exportProgressText').textContent = '';
+        setExportNotice('exportPreparing');
+        updateUI();
+        try {
+          // Pause first so a suspended context cannot produce a burst of
+          // playback audio merely to service a snapshot request.
+          send({type:needsResume ? 'interrupt' : 'pause'});
+          if (wasSuspended) await resumeForExport(job);
+          if (job.cancelled) throw canceledExportError();
+          if (sessionGeneration !== generation) throw new Error('Session changed');
+          const snapshot = await requestSnapshot(job);
+          if (job.cancelled) throw canceledExportError();
+          if (snapshot.generation !== sessionGeneration) throw new Error('Session changed');
+          setExportNotice('exporting');
+          updateExportProgress(0);
+          const wav = await encodeWav(snapshot,duration,job,updateExportProgress);
+          if (job.cancelled || sessionGeneration !== generation) throw canceledExportError();
+          const url = URL.createObjectURL(new Blob([wav],{type:'audio/wav'}));
+          exportedUrl = url;
+          $('#exportPreviewAudio').src = url;
+          $('#exportDownloadAgain').href = url;
+          $('#exportDownloadAgain').download = filename;
+          $('#exportPreviewBlock').hidden = false;
+          const seconds = (wav.byteLength-44)/2/snapshot.rate;
+          const size = (wav.byteLength/1048576).toFixed(2);
+          setExportNotice('exportReady', ' · ' + filename + ' · ' +
+            seconds.toFixed(1) + ' s · ' + size + ' MiB');
+          // Some mobile browsers suppress downloads after async work. Keep a
+          // real clickable download link visible as the explicit fallback.
+          const a=document.createElement('a');
+          a.href=url;
+          a.download=filename;
+          document.body.append(a);
+          try { a.click(); } catch { /* The user can use the visible link. */ }
+          finally { a.remove(); }
+        } catch (error) {
+          // No incomplete output should remain clickable after a failed build.
+          clearExportPreview();
+          if (error?.name === 'AbortError') setExportNotice('exportCanceled');
+          else {
+            setExportNotice('exportFail');
+            AppToast.show({message:t('exportFail'),tone:'danger',duration:5000});
+          }
+        } finally {
+          // Match the transport that was active before export. Never auto
+          // resume after an OS interruption or on a hidden page.
+          if (wasPlaying && !needsResume && !processorFailed &&
+              !document.hidden && context.state === 'running') send({type:'resume'});
+          if (wasSuspended && context.state === 'running') {
+            try { await context.suspend(); } catch { /* Context can close on pagehide. */ }
+          }
+          activeExportJob = null;
+          exporting = false;
+          $('#exportProgressWrap').hidden = true;
+          updateUI();
+        }
       }
 
-      $('#languageButton').addEventListener('click', () => {
-        language = language === 'ja' ? 'en' : 'ja';
-        writeStorage(storageKeys.language, language);
+      $('#languageButton').addEventListener('click',()=>{
+        language=language==='ja'?'en':'ja';
+        writeStorage(storageKeys.language,language);
         applyLanguage();
       });
-      const helpDialog = $('#helpDialog');
-      $('#helpButton').addEventListener('click', () => helpDialog.showModal());
-      $('#closeHelpButton').addEventListener('click', () => helpDialog.close());
-      helpDialog.addEventListener('click', event => {
-        const rect = helpDialog.getBoundingClientRect();
-        const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
-        if (outside) helpDialog.close();
+      const helpDialog=$('#helpDialog');
+      let helpScrollLock = null;
+      function lockHelpBackground() {
+        if (helpScrollLock) return;
+        const root = document.documentElement;
+        const body = document.body;
+        const y = window.scrollY;
+        helpScrollLock = {
+          y, htmlOverflow: root.style.overflow, htmlScrollBehavior: root.style.scrollBehavior,
+          position: body.style.position, top: body.style.top,
+          left: body.style.left, right: body.style.right, width: body.style.width
+        };
+        // iOS Safari can still scroll behind a modal unless the body is fixed.
+        root.style.overflow = 'hidden';
+        body.style.position = 'fixed';
+        body.style.top = '-' + y + 'px';
+        body.style.left = '0';
+        body.style.right = '0';
+        body.style.width = '100%';
+      }
+      function unlockHelpBackground() {
+        const lock = helpScrollLock;
+        if (!lock || document.querySelector('dialog[open]')) return;
+        helpScrollLock = null;
+        const root = document.documentElement;
+        const body = document.body;
+        body.style.position = lock.position;
+        body.style.top = lock.top;
+        body.style.left = lock.left;
+        body.style.right = lock.right;
+        body.style.width = lock.width;
+        root.style.overflow = lock.htmlOverflow;
+        root.style.scrollBehavior = 'auto';
+        window.scrollTo(0, lock.y);
+        root.style.scrollBehavior = lock.htmlScrollBehavior;
+      }
+      $('#helpButton').addEventListener('click',()=>{
+        if (helpDialog.open) return;
+        helpDialog.showModal();
+        lockHelpBackground();
       });
-      editor.addEventListener('input', saveText);
-      outputFilename.addEventListener('blur', () => { outputFilename.value = normalizedFilenameBase(); });
-      $('#copyButton').addEventListener('click', copyText);
-      $('#downloadButton').addEventListener('click', downloadText);
-      $('#sampleButton').addEventListener('click', () => {
-        const before = editor.value;
-        editor.value = sampleText[language];
-        saveText();
-        showToast(translate('restored'), { actionLabel: translate('undo'), onAction: () => { editor.value = before; saveText(); editor.focus(); showToast(translate('undone')); } });
+      helpDialog.addEventListener('close',unlockHelpBackground);
+      $('#closeHelpButton').addEventListener('click',()=>helpDialog.close());
+      helpDialog.addEventListener('click',event=>{
+        const rect=helpDialog.getBoundingClientRect();
+        if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)helpDialog.close();
       });
-      $('#clearButton').addEventListener('click', () => {
-        if (!editor.value) return;
-        const before = editor.value;
-        editor.value = '';
-        saveText();
-        editor.focus();
-        showToast(translate('cleared'), {
-          actionLabel: translate('undo'),
-          onAction: () => { editor.value = before; saveText(); editor.focus(); showToast(translate('undone')); },
-          duration: 5000
-        });
+      $('#micButton').addEventListener('click',prepareMicrophone);
+      $('#modeSelect').addEventListener('change',updateModeNote);
+      $('#bpmInput').addEventListener('change',configure);
+      $('#barsSelect').addEventListener('change',configure);
+      document.querySelectorAll('[data-pad]').forEach(el=>el.addEventListener('click',()=>queuePad(Number(el.dataset.pad))));
+      document.querySelectorAll('[data-manage]').forEach(el=>el.addEventListener('click',()=>openTrackDialog(Number(el.dataset.manage))));
+      $('#pauseButton').addEventListener('click',togglePause);
+      $('#abortButton').addEventListener('click',()=>send({type:'abort'}));
+      $('#undoButton').addEventListener('click',()=>{if(!isBusy())send({type:'undo'});});
+      $('#resetButton').addEventListener('click',resetAll);
+      $('#downloadButton').addEventListener('click',downloadWav);
+      $('#cancelExportButton').addEventListener('click',cancelExport);
+      $('#exportDuration').addEventListener('change',markExportStale);
+      $('#exportDownloadAgain').addEventListener('click',event=>{
+        if (!exportedUrl) {event.preventDefault();return;}
+        $('#exportDownloadAgain').download=normalizedFilename()+'.wav';
       });
-
-      editor.value = readStorage(storageKeys.text) || sampleText[language];
-      outputFilename.value = APP_CONFIG.slug || 'text';
-      $('#versionBadge').textContent = `v${APP_CONFIG.version}`;
-      $('#buildVersion').textContent = APP_CONFIG.version;
-      $('#builtAt').textContent = BUILD_MANIFEST.generatedAtUtc || '—';
-      $('#dependencyCount').textContent = String(BUILD_MANIFEST.dependencies?.length || 0);
+      $('#exportPreviewAudio').addEventListener('play',()=>{
+        if (!isBusy() && state === 'playing' && !needsResume && !processorFailed) send({type:'pause'});
+      });
+      $('#outputFilename').addEventListener('blur',normalizedFilename);
+      $('#closeTrackDialog').addEventListener('click',closeTrackDialog);
+      const trackDialog=$('#trackDialog');
+      trackDialog.addEventListener('close',unlockHelpBackground);
+      trackDialog.addEventListener('click',event=>{
+        const rect=trackDialog.getBoundingClientRect();
+        if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeTrackDialog();
+      });
+      $('#gainInput').addEventListener('input',()=>{
+        $('#gainValue').textContent=$('#gainInput').value+'%';
+        adjustSelected('gain',Number($('#gainInput').value)/100);
+      });
+      function setShift(value) {
+        const adjusted = Math.max(-200,Math.min(200,Math.round(value/5)*5));
+        $('#shiftInput').value = String(adjusted);
+        $('#shiftValue').textContent = adjusted + ' ms';
+        adjustSelected('shiftMs',adjusted);
+      }
+      $('#shiftInput').addEventListener('input',()=>setShift(Number($('#shiftInput').value)));
+      $('#shiftEarlier').addEventListener('click',()=>setShift(Number($('#shiftInput').value)-5));
+      $('#shiftReset').addEventListener('click',()=>setShift(0));
+      $('#shiftLater').addEventListener('click',()=>setShift(Number($('#shiftInput').value)+5));
+      $('#rerecordButton').addEventListener('click',()=>{
+        const index=selectedPad;closeTrackDialog();queuePad(index,true);
+      });
+      $('#deleteTrackButton').addEventListener('click',deleteSelected);
+      document.addEventListener('keydown',event=>{
+        if (event.altKey||event.ctrlKey||event.metaKey||event.repeat||document.querySelector('dialog[open]')) return;
+        if (event.target.closest('input,textarea,select,button,[contenteditable]')) return;
+        if (/^[1-4]$/.test(event.key)) {event.preventDefault();queuePad(Number(event.key)-1);}
+        if (event.code==='Space') {event.preventDefault();togglePause();}
+      });
+      document.addEventListener('visibilitychange',()=>{
+        if (document.hidden && context && engine && activeMic) interruption('');
+      });
+      window.addEventListener('pagehide',()=>{
+        if (activeExportJob) cancelExport();
+        clearExportPreview();
+        stopStream();
+        if(context)context.close().catch(()=>{});
+      });
+      window.addEventListener('beforeunload',event=>{
+        if(hasTakes()){event.preventDefault();event.returnValue='';}
+      });
+      $('#versionBadge').textContent='v'+APP_CONFIG.version;
+      $('#buildVersion').textContent=APP_CONFIG.version;
+      $('#builtAt').textContent=BUILD_MANIFEST.generatedAtUtc||'—';
+      $('#dependencyCount').textContent=String(BUILD_MANIFEST.dependencies?.length||0);
+      $('#outputFilename').value=defaultFilename();
       applyLanguage();
+      // APP:SCRIPT:END
     })();
   </script>
 </body>

@@ -35,6 +35,10 @@ jobs:
         with:
           node-version: 24
 
+      - name: Test Loop Pedal audio engine
+        shell: pwsh
+        run: node --test tests/loop-pedal.test.cjs tests/release-audit.test.cjs
+
       - name: Validate PowerShell syntax and encoding
         shell: powershell
         run: .\scripts\check-powershell-syntax.ps1
