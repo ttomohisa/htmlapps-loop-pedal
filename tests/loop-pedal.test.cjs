@@ -207,7 +207,7 @@ function offlineSample() {
   return vm.runInNewContext(source[0] + '\nplaybackSample;');
 }
 
-test('seam treatment preserves the downbeat and matches offline export', () => {
+test('selective seam micro-fades preserve source PCM, downbeat timing, and WAV parity', () => {
   const {processor,send,processFrames}=fixture(1000);
   send({type:'configure',bpm:100,bars:1});
   const N=processor.length;
@@ -217,23 +217,57 @@ test('seam treatment preserves the downbeat and matches offline export', () => {
   processFrames(N-256,0);
   processFrames(128,-0.9);
   const track=processor.tracks[0];
-  assert.ok(track && track.seamDelta>1.7);
+  assert.ok(track && track.seamFix);
   assert.equal(track.pcm[0],Math.fround(0.9));
   assert.equal(track.pcm[N-1],Math.fround(-0.9));
-  assert.ok(Math.abs(processor.loopSample(track,0)-track.pcm[0])<1e-7);
-  assert.ok(Math.abs(processor.loopSample(track,N-1)-track.pcm[0])<1e-6);
-  // First sample is untouched, the very end approaches it smoothly.
+  assert.equal(processor.loopSample(track,0),0,'Downbeat begins with a micro-fade, not a shifted frame');
+  assert.equal(processor.loopSample(track,N-1),0,'Tail ends at zero');
+  assert.equal(processor.loopSample(track,track.seamHead),track.pcm[track.seamHead],
+    'Head is unchanged after the first millisecond');
+  assert.equal(processor.loopSample(track,track.seamStart-1),track.pcm[track.seamStart-1]);
   assert.equal(processor.loopSample(track,track.seamStart),track.pcm[track.seamStart]);
   const offline=offlineSample();
   const exported={
     pcm:track.pcm,gain:track.gain,shiftMs:0,
-    seamStart:track.seamStart,seamDelta:track.seamDelta
+    seamStart:track.seamStart,seamHead:track.seamHead,seamFix:track.seamFix
   };
-  for(const i of [0,1,N-8,N-4,N-3,N-2,N-1]) {
+  for(const i of [0,1,2,5,N-8,N-4,N-3,N-2,N-1]) {
     const realtime=processor.loopSample(track,i);
     const sampled=offline(exported,i,N,1000);
     assert.ok(Math.abs(realtime-sampled)<1e-6, String(i));
   }
+});
+
+test('quiet tails stay quiet: seam treatment must not invent a DC swell',()=>{
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4);
+  processFrames(100,0.7);
+  processFrames(N-200,0);
+  processFrames(100,0.006);
+  const track=processor.tracks[0];
+  assert.ok(track.seamFix);
+  for(let i=track.seamStart;i<N;i++) {
+    assert.ok(Math.abs(processor.loopSample(track,i))<=0.0061,
+      'Previous implementation bent a quiet tail up to the first attack');
+  }
+  assert.equal(processor.loopSample(track,N-1),0);
+  assert.equal(track.pcm[0],Math.fround(0.7));
+  assert.equal(track.pcm[N-1],Math.fround(0.006));
+});
+
+test('matching periodic endpoints are unaltered by seam treatment',()=>{
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  send({type:'queue',index:0,mode:'speaker'});
+  processFrames(processor.beat*4+N,0.65);
+  const track=processor.tracks[0];
+  assert.equal(track.seamFix,false);
+  assert.equal(processor.loopSample(track,0),track.pcm[0]);
+  assert.equal(processor.loopSample(track,N-1),track.pcm[N-1]);
 });
 
 test('per-track positive and negative timing compensation agrees with WAV render', () => {
@@ -249,7 +283,7 @@ test('per-track positive and negative timing compensation agrees with WAV render
     // Crossfade the transient shift update before comparing steady-state playback.
     processor.process([[new Float32Array(256)]],[[new Float32Array(256)]]);
     const data={pcm:take.pcm,gain:take.gain,shiftMs:take.shiftMs,
-      seamDelta:take.seamDelta,seamStart:take.seamStart};
+      seamFix:take.seamFix,seamStart:take.seamStart,seamHead:take.seamHead};
     for (const f of [0,1,4,50,N-1]) {
       const real=processor.loopSample(take,(f-take.targetShift+N)%N)*take.gain;
       const saved=offline(data,f,N,1000);
@@ -485,7 +519,8 @@ test('WAV export respects mute, gain, timing and seam correction at every frame'
   const snapshot=fakeSnapshot({rate,length,takes:[a,b]});
   const wav=await encodeWav(snapshot,'loop',{cancelled:false});
   const seamStart=length-Math.min(Math.max(2,Math.round(rate*.004)),Math.floor(length/4));
-  const take={...a,seamStart,seamDelta:waveform[0]-waveform[length-1]};
+  const seamHead=Math.min(Math.max(2,Math.round(rate*.001)),Math.floor(length/4));
+  const take={...a,seamStart,seamHead,seamFix:true};
   const {playbackSample}=loadWavCode();
   for(let i=0;i<length;i++) {
     const expected=Math.tanh(playbackSample(take,i,length,rate)*.7);
@@ -671,9 +706,10 @@ test('regression: steady-state live mix and WAV differ only by 16-bit quantizati
       amplitude*Math.sin(2*Math.PI*freq*i/rate));
     const shift=Math.round(shiftMs*rate/1000);
     const seamStart=N-Math.min(processor.seamSamples,Math.floor(N/4));
-    const seamDelta=Math.abs(pcm[0]-pcm[N-1])<0.02?0:pcm[0]-pcm[N-1];
+    const seamHead=Math.min(processor.seamHeadSamples,Math.floor(N/4));
+    const seamFix=Math.abs(pcm[0]-pcm[N-1])>=0.02;
     return {pcm,gain,shiftMs,shift,targetShift:shift,shiftFade:0,
-      smooth:muted?0:gain,muted,seamStart,seamDelta};
+      smooth:muted?0:gain,muted,seamStart,seamHead,seamFix};
   }
   processor.tracks=[
     take(20,.45,.75,-25,false),take(12,.3,1,50,false),
