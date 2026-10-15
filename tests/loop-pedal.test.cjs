@@ -609,3 +609,87 @@ test('suspended audio context resume settles cleanly when audio becomes availabl
   await resume(job);
   assert.equal(job.cancelWait,null);
 });
+
+
+test('regression: first downbeat is at the sample AFTER exactly four count-in beats', () => {
+  const {processor,send,processFrames}=fixture(1000);
+  send({type:'configure',bpm:100,bars:1});
+  const beat=processor.beat, length=processor.length;
+  assert.equal(beat,600); assert.equal(length,2400);
+  send({type:'queue',index:0,mode:'speaker'});
+  const clicks=Float32Array.from(processFrames(beat*4,0).flatMap(block=>Array.from(block)));
+  for(let k=0;k<4;k++){
+    assert.ok(Array.from(clicks.subarray(k*beat,k*beat+18)).some(x=>Math.abs(x)>0.005),
+      'Count-in click '+(k+1)+' is missing');
+  }
+  assert.equal(processor.state,'recording');
+  assert.equal(processor.phase,0);
+  assert.equal(processor.pending.position,0);
+  // The first actual capture frame must be exactly the first audio frame
+  // after 4 count-in beats, not the start of beat 2.
+  processor.process([[Float32Array.from([0.9])]],[[new Float32Array(1)]]);
+  assert.equal(processor.pending.buffer[0],Math.fround(0.9));
+  assert.equal(processor.pending.position,1);
+  assert.equal(processor.phase,1);
+  processFrames(length-1,0);
+  assert.equal(processor.state,'playing');
+  assert.equal(processor.phase,0);
+  assert.equal(processor.tracks[0].pcm[0],Math.fround(0.9));
+  assert.equal(processor.tracks[0].pcm[beat],0);
+
+  send({type:'queue',index:1,mode:'speaker'});
+  assert.equal(processor.state,'queued');
+  processFrames(length,0);
+  assert.equal(processor.state,'recording');
+  assert.equal(processor.phase,0);
+  processor.process([[Float32Array.from([0.8])]],[[new Float32Array(1)]]);
+  processFrames(length-1,0);
+  assert.equal(processor.tracks[1].pcm[0],Math.fround(0.8));
+  assert.equal(processor.tracks[1].pcm[beat],0);
+  assert.equal(processor.phase,0);
+});
+
+test('regression: beat rounding differs by at most two samples, never a whole beat', () => {
+  for(const rate of [44100,48000]){
+    const {processor,send}=fixture(rate);
+    for(const bpm of [40,60,100,127,160,200]){
+      send({type:'configure',bpm,bars:1});
+      const expected=Math.round(4*rate*60/bpm);
+      assert.ok(Math.abs(processor.beat*4-expected)<=2,
+        'Count-in boundary discrepancy at '+rate+' Hz / '+bpm+' BPM');
+    }
+  }
+});
+
+test('regression: steady-state live mix and WAV differ only by 16-bit quantization',async()=>{
+  const rate=1000;
+  const {processor,send}=fixture(rate);
+  send({type:'configure',bpm:100,bars:1});
+  const N=processor.length;
+  function take(freq,amplitude,gain,shiftMs,muted){
+    const pcm=Float32Array.from({length:N},(_,i)=>
+      amplitude*Math.sin(2*Math.PI*freq*i/rate));
+    const shift=Math.round(shiftMs*rate/1000);
+    const seamStart=N-Math.min(processor.seamSamples,Math.floor(N/4));
+    const seamDelta=Math.abs(pcm[0]-pcm[N-1])<0.02?0:pcm[0]-pcm[N-1];
+    return {pcm,gain,shiftMs,shift,targetShift:shift,shiftFade:0,
+      smooth:gain,muted,seamStart,seamDelta};
+  }
+  processor.tracks=[
+    take(20,.45,.75,-25,false),take(12,.3,1,50,false),
+    take(15,.7,.8,0,true),null
+  ];
+  const snapshot={length:N,rate,tracks:processor.tracks.map(t=>t?{
+    pcm:t.pcm,gain:t.gain,muted:t.muted,shiftMs:t.shiftMs
+  }:null)};
+  const {encodeWav}=loadWavCode();
+  const wav=await encodeWav(snapshot,'loop',{cancelled:false});
+  let largestDifference=0;
+  for(let i=0;i<N;i++){
+    const live=processor.mix(i,-1);
+    const pcm16=pcmInt16Sample(wav,i)/32768;
+    largestDifference=Math.max(largestDifference,Math.abs(live-pcm16));
+  }
+  assert.ok(largestDifference<2/32768,
+    'Live and WAV signal paths diverged: '+largestDifference);
+});
