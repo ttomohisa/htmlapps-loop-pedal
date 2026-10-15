@@ -779,7 +779,7 @@
       <ul>
         <li data-i18n="helpNoteStorage">録音はメモリにのみ保持します。ページの更新・終了で消えます。必要な音声はWAVで保存してください。</li>
         <li data-i18n="helpNoteBrowser">画面ロック、着信、タブ切り替え、マイクの切断で録音が止まる場合があります。復帰後は明示的に再開してください。</li>
-        <li data-i18n="helpNoteLatency">端末や接続方式による録音遅延は完全には自動補正できません。パッドの設定からタイミングを調整してください。</li>
+        <li data-i18n="helpNoteLatency">端末や接続方式による録音遅延は完全には自動補正できません。パッドで位置を調整してください。ループの境目では短い音量調整を行うため、素材によって聞こえ方が変わることがあります。</li>
       </ul>
       <p class="dialog-note" data-i18n="helpOffline">音声処理に外部サービスは使いません。配布HTMLは単一ファイルですが、マイクや音声処理はブラウザの対応状況に左右されます。</p>
       <!-- APP:HELP:END -->
@@ -1314,7 +1314,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "helpNotesTitle": "注意事項",
           "helpNoteStorage": "録音はメモリにのみ保持します。ページの更新・終了で消えます。必要な音声はWAVで保存してください。",
           "helpNoteBrowser": "画面ロック、着信、タブ切り替え、マイクの切断で録音が止まる場合があります。復帰後は明示的に再開してください。音声処理が完全に停止した場合は再読み込みが必要で、未保存の録音は失われます。",
-          "helpNoteLatency": "端末や接続方式による録音遅延は完全には自動補正できません。パッドの設定からタイミングを調整してください。",
+          "helpNoteLatency": "端末や接続方式による録音遅延は完全には自動補正できません。パッドで位置を調整してください。ループの境目では短い音量調整を行うため、素材によって聞こえ方が変わることがあります。",
           "helpOffline": "音声処理に外部サービスは使いません。配布HTMLは単一ファイルですが、マイクや音声処理はブラウザの対応状況に左右されます。"
         },
         "en": {
@@ -1461,7 +1461,7 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
           "helpNotesTitle": "Notes",
           "helpNoteStorage": "Takes are kept only in memory and disappear if the page closes or reloads. Download a WAV to keep them.",
           "helpNoteBrowser": "Screen lock, calls, tab switching or microphone disconnection can interrupt recording. Resume explicitly after returning. If the audio engine stops entirely, reloading is required and unsaved recordings are lost.",
-          "helpNoteLatency": "Device-dependent input/output latency cannot always be corrected automatically. Adjust per-track timing if needed.",
+          "helpNoteLatency": "Device-dependent latency cannot always be corrected automatically. Adjust per-track timing if needed. A brief level adjustment is used at loop edges, so the transition may sound different depending on the recording.",
           "helpOffline": "No online audio service is required. The distributed HTML is self-contained, but microphone support depends on your browser."
         }
       };
