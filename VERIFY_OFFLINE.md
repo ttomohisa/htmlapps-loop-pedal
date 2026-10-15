@@ -35,6 +35,21 @@ workflow, if credentials are configured. On Android Chrome and iPhone Safari:
 - Record samples / devices / audio routes / measured compensation separately.
 - Check CSP and runtime requests after the initial HTML has loaded.
 
+## v1.0.0-rc.2 loop transition quality checks
+
+- Use the **same source sounds, BPM and number of bars** as the release
+  candidate that felt unnatural at the loop edge.
+- Verify short claps/percussion, quiet tails, sustained voice and a mixture
+  of four tracks. Listen repeatedly across the transition; note clicks,
+  dull first attacks, pumping, or missing tail audio.
+- The new fix fades only mismatched seams: up to 4ms at the tail and 1ms at
+  the head. Confirm that the next downbeat starts on time, and that WAV
+  playback sounds the same as looping inside the application.
+- Listen on Windows speakers, Android speaker and wired headphones.
+  Track subjective results separately from measured input/output latency.
+- Do not commit the original user-supplied diagnostic WAV to this public
+  repository. It is private test input and was used locally for analysis.
+
 ## v0.3.0 smartphone regression checks
 
 - Scroll halfway down, open “使い方と注意事項”, then try scrolling behind

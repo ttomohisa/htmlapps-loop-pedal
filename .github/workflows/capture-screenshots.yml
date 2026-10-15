@@ -6,6 +6,7 @@ on:
     branches:
       - feat/loop-pedal-audio-prototype
     paths:
+      - app.config.json
       - scripts/capture-screenshots.mjs
       - .github/workflows/capture-screenshots.yml
 

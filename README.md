@@ -6,7 +6,7 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 
 [Japanese desktop screenshot](assets/screenshot.png) · [Mobile screenshot (390px)](assets/screenshot-mobile.png)
 
-> **Release candidate v1.0.0-rc.1** — Core recording and WAV export passed deterministic Node tests, and a headless Windows Edge session recorded two test-microphone tracks to capture real UI screenshots. iPhone/Android microphone paths, real headphone latency, external-player downloads, and acoustic quality remain unverified. This is **not a production release**.
+> **Release candidate v1.0.0-rc.2** — Based on the user's feedback, the earlier WAV-quality and one-beat-offset concerns were withdrawn. This candidate changes only the loop-edge treatment to reduce an unnatural transition, while retaining PCM and sample positions. This specific acoustic improvement still requires a human listening check; iPhone/Android and other release gates remain open.
 
 [日本語 README](README.ja.md) · [Product specification](APP_SPEC.md) · [Acceptance matrix](ACCEPTANCE_MATRIX.md) · [Release candidate review](RELEASE_REVIEW.md)
 
@@ -16,7 +16,7 @@ Record sounds on four pads, loop each take to the same musical length, layer the
 - 40–200 BPM, 4/4, and 1/2/4 bars. Four-beat count-in for the first recording and loop-boundary quantization for later recordings.
 - Sample-frame-based recording and a shared audio-clock loop for all tracks.
 - Per-pad mute, gain, non-destructive timing adjustment (−200 to +200 ms, 5 ms steps), re-record, and last-recording Undo.
-- Short loop-seam smoothing preserving the source's first sample, applied to playback and WAV export.
+- Selective micro-fades at mismatched loop boundaries (up to ~4ms before the boundary and ~1ms after); unlike the earlier algorithm, they do not bend the quiet tail toward the first attack. Original recorded PCM and beat positions stay unchanged. Playback and WAV export use the same calculation.
 - Collapsible browser audio diagnostics. These values do **not** constitute an input-latency calibration.
 - Export 16-bit mono PCM WAV: one loop (without an end fade), 30 seconds, or 60 seconds (with a 0.25-second end fade). Editable and sanitized filenames.
 - Cancellable progress during export, local audio preview, and an explicit retry-download link that remains available until tracks or export duration change.

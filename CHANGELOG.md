@@ -4,6 +4,15 @@
 
 - Pending physical-device timing, interruption and audio-route verification, real-device download checks, and final stable v1.0.0 approval.
 
+## 1.0.0-rc.2 - Loop transition refinement - 2026-10-15
+
+- User clarified that the previous reports of generally poor WAV quality and a one-beat recording offset were false alarms; neither is tracked as a confirmed defect.
+- Inspected a user-provided 30-second mono PCM WAV **locally only**, without committing or uploading it. It repeats a 4.8-second loop exactly; the transition had a ~4ms tail ramp consistent with the prior seam-smoothing algorithm.
+- Replaced the artificial tail-to-head amplitude ramp with selective ~4ms fade-out and ~1ms fade-in on boundary-mismatched tracks. The original PCM, loop length, transport sample clock and output format remain unchanged.
+- Kept processing equivalent between the AudioWorklet loop mixer and PCM WAV export.
+- Added regression tests for quiet-tail preservation, matched-endpoint bypass, downbeat/loop timing, playback-WAV parity and no accumulated frame drift.
+- The perceived improvement still needs listening tests; real-device audio routing, latency measurements and remaining P0 requirements are not automatically approved.
+
 ## 1.0.0-rc.1 - Release verification candidate - 2026-10-14
 
 - Captured desktop Japanese, desktop English, and 390px smartphone screenshots from the actual built Loop Pedal UI in Windows Edge, using genuine AudioWorklet recordings from an automated synthetic microphone.

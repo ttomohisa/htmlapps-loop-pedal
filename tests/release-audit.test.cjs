@@ -79,7 +79,7 @@ test('README screenshots and release notes reflect current product',()=>{
   ]) {
     const text=read(readme).toString('utf8');
     assert.ok(text.includes(file),readme+' missing '+file);
-    assert.ok(text.includes('v1.0.0-rc.1'),readme+' prerelease missing');
+    assert.ok(text.includes('v1.0.0-rc.2'),readme+' prerelease missing');
   }
-  assert.ok(read('CHANGELOG.md').toString('utf8').includes('1.0.0-rc.1'));
+  assert.ok(read('CHANGELOG.md').toString('utf8').includes('1.0.0-rc.2'));
 });
