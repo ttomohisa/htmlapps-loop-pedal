@@ -797,7 +797,10 @@ class LoopPedalProcessor extends AudioWorkletProcessor {
     this.bpm = 100;
     this.bars = 2;
     this.length = this.computeLength();
+    // Asymmetric micro-fades avoid bending the quiet tail toward the first
+    // downbeat sample, which previously created an audible pre-loop ramp.
     this.seamSamples = Math.max(2, Math.round(this.rate * 0.004));
+    this.seamHeadSamples = Math.max(2, Math.round(this.rate * 0.001));
     this.beat = Math.round(this.rate * 60 / this.bpm);
     this.phase = 0;
     this.countPosition = 0;
@@ -937,18 +940,20 @@ class LoopPedalProcessor extends AudioWorkletProcessor {
     const previous = this.tracks[p.index];
     const seamStart = Math.max(0, p.buffer.length - Math.min(this.seamSamples, Math.floor(p.buffer.length / 4)));
     const boundaryDifference = p.buffer[0] - p.buffer[p.buffer.length - 1];
-    // Do not modify recorded PCM. Ease the very end of each take toward its
-    // first sample, so the first beat's transient remains exactly unchanged.
-    const seamDelta = Math.abs(boundaryDifference) < 0.02 ? 0 : boundaryDifference;
+    const seamFix = Math.abs(boundaryDifference) >= 0.02;
+    const seamHead = Math.min(this.seamHeadSamples, Math.floor(p.buffer.length / 4));
+    // Leave original PCM intact. Only mismatched seams get a 4ms tail
+    // fade-out and a short 1ms head fade-in, so no synthetic DC ramp leads
+    // into the downbeat. Neither operation shifts the sample clock.
     this.tracks[p.index] = previous ? {
       pcm: p.buffer, gain: previous.gain, muted: false,
       shiftMs: previous.shiftMs, shift: previous.targetShift,
       targetShift: previous.targetShift, shiftFade: 0,
-      smooth: previous.gain, seamStart, seamDelta
+      smooth: previous.gain, seamStart, seamHead, seamFix
     } : {
       pcm: p.buffer, gain: 1, muted: false, shiftMs: 0,
       shift: 0, targetShift: 0, shiftFade: 0, smooth: 1,
-      seamStart, seamDelta
+      seamStart, seamHead, seamFix
     };
     this.undo = {index: p.index, previous: previous};
     this.pending = null;
@@ -965,15 +970,21 @@ class LoopPedalProcessor extends AudioWorkletProcessor {
       }
     }
   }
-  // The correction is localized to the final ~4 ms and never changes PCM[0].
+  // Only mismatched boundaries use micro-fades. Prevent a synthetic ramp on
+  // the tail and a discontinuous sample jump on the next downbeat.
   loopSample(track, index) {
     const source = track.pcm[index];
-    if (!track.seamDelta || index < track.seamStart) return source;
-    const denom = track.pcm.length - track.seamStart - 1;
-    if (denom < 1) return source;
-    const x = (index - track.seamStart) / denom;
-    const smoothstep = x * x * (3 - 2 * x);
-    return source + track.seamDelta * smoothstep;
+    if (!track.seamFix) return source;
+    if (index < track.seamHead) {
+      const x = index / Math.max(1, track.seamHead - 1);
+      return source * x * x * (3 - 2 * x);
+    }
+    if (index >= track.seamStart) {
+      const x = (track.pcm.length - 1 - index) /
+        Math.max(1, track.pcm.length - 1 - track.seamStart);
+      return source * x * x * (3 - 2 * x);
+    }
+    return source;
   }
   // Signed shiftMs is perceived movement in time; negative means earlier.
   mix(frame, excludedIndex) {
@@ -2100,11 +2111,14 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         let index = (frame % loopFrames - shift) % loopFrames;
         if (index < 0) index += loopFrames;
         let sample = take.pcm[index];
-        if (take.seamDelta && index >= take.seamStart) {
-          const denominator = loopFrames - take.seamStart - 1;
-          if (denominator >= 1) {
-            const x = (index - take.seamStart) / denominator;
-            sample += take.seamDelta * x * x * (3 - 2 * x);
+        if (take.seamFix) {
+          if (index < take.seamHead) {
+            const x = index / Math.max(1, take.seamHead - 1);
+            sample *= x * x * (3 - 2 * x);
+          } else if (index >= take.seamStart) {
+            const x = (loopFrames - 1 - index) /
+              Math.max(1, loopFrames - 1 - take.seamStart);
+            sample *= x * x * (3 - 2 * x);
           }
         }
         return sample * take.gain;
@@ -2173,13 +2187,14 @@ registerProcessor('loop-pedal-processor', LoopPedalProcessor);
         const view = new DataView(buffer);
         wavHeader(view,frames,rate);
         const seamSamples = Math.max(2,Math.round(rate * 0.004));
+        const seamHeadSamples = Math.max(2,Math.round(rate * 0.001));
         const audible = snapshot.tracks.filter(take=>take && !take.muted && take.gain>0)
           .map(take => {
             const seamStart = Math.max(0, take.pcm.length -
               Math.min(seamSamples, Math.floor(take.pcm.length / 4)));
-            const boundaryDifference = take.pcm[0] - take.pcm[take.pcm.length - 1];
-            return {...take, seamStart,
-              seamDelta: Math.abs(boundaryDifference) < 0.02 ? 0 : boundaryDifference};
+            const seamHead = Math.min(seamHeadSamples,Math.floor(take.pcm.length / 4));
+            const seamFix = Math.abs(take.pcm[0] - take.pcm[take.pcm.length - 1]) >= 0.02;
+            return {...take, seamStart, seamHead, seamFix};
           });
         const fadeFrames = duration === 'loop' ? 0 : Math.min(frames,Math.round(rate*0.25));
         for (let start=0;start<frames;start+=8192) {
