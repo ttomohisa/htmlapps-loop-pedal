@@ -20,6 +20,15 @@ Status: **Release candidate / not approved for stable v1.0.0**
 
 **現時点の判定: 改善候補を実装したが、聴感での解消は未確認。stable v1.0.0は未承認。**
 
+
+### rc.2 自動検証結果と証跡（2026-10-15）
+
+- [Validate standalone HTML（成功）](https://github.com/ttomohisa/htmlapps-loop-pedal/actions/runs/38695933607): 音声エンジン・継ぎ目の回帰テスト、リリース監査、テンプレートに従った単一HTML/自己展開版生成。
+- [Cloudflare Preview（成功）](https://github.com/ttomohisa/htmlapps-loop-pedal/actions/runs/38695933615): 同じrc.2コードのPR Preview更新・疎通確認。
+- [Windows Edge自動録音・WAV書き出し・日英/スマホ幅スクリーンショット（成功）](https://github.com/ttomohisa/htmlapps-loop-pedal/actions/runs/38695925830): テスト用の仮想マイクを使用。実機の音質や録音経路の計測ではない。
+- Screenshot更新コミットはCIの実行承認が必要になることがあるため、後続のPRチェックで最終HEADを再検証する。
+- 添付された個人録音のデータ本体は公開リポジトリに含めない。継ぎ目が聴感上改善したかは**未実施**として残す。
+
 The source of truth is [APP_SPEC.md](APP_SPEC.md) and [ACCEPTANCE_MATRIX.md](ACCEPTANCE_MATRIX.md). This review separates automated evidence from device testing still required.
 
 ## Automated evidence
