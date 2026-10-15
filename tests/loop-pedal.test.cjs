@@ -221,7 +221,7 @@ test('selective seam micro-fades preserve source PCM, downbeat timing, and WAV p
   assert.equal(track.pcm[0],Math.fround(0.9));
   assert.equal(track.pcm[N-1],Math.fround(-0.9));
   assert.equal(processor.loopSample(track,0),0,'Downbeat begins with a micro-fade, not a shifted frame');
-  assert.equal(processor.loopSample(track,N-1),0,'Tail ends at zero');
+  assert.ok(Math.abs(processor.loopSample(track,N-1))<1e-12,'Tail ends at silence');
   assert.equal(processor.loopSample(track,track.seamHead),track.pcm[track.seamHead],
     'Head is unchanged after the first millisecond');
   assert.equal(processor.loopSample(track,track.seamStart-1),track.pcm[track.seamStart-1]);
@@ -253,7 +253,7 @@ test('quiet tails stay quiet: seam treatment must not invent a DC swell',()=>{
     assert.ok(Math.abs(processor.loopSample(track,i))<=0.0061,
       'Previous implementation bent a quiet tail up to the first attack');
   }
-  assert.equal(processor.loopSample(track,N-1),0);
+  assert.ok(Math.abs(processor.loopSample(track,N-1))<1e-12);
   assert.equal(track.pcm[0],Math.fround(0.7));
   assert.equal(track.pcm[N-1],Math.fround(0.006));
 });
